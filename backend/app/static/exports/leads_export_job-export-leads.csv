@@ -1,0 +1,4 @@
+ID,First Name,Last Name,Email,Phone,Status,Priority,Source,Final Score,Automatic Score,Manual Score,Score Source,Score Last Updated,Budget,Expected Revenue
+lead-manual,Manual,Lead,manual@test.com,,New,Normal,Website,75,35,75,Manual,2026-07-14T14:29:59.768518,0.0,0.0
+fecaea8c-b0a0-4116-9b6c-dd111f8a3326,Alice,Imported,alice@import.com,+15551111,New,High,Import,10,10,,Automatic,2026-07-14T14:30:00.294236,0.0,0.0
+b6cac8b1-45f0-49ee-81a8-1e96ebc22153,Bob,Imported,bob@import.com,+15552222,Contacted,Normal,Import,10,10,,Automatic,2026-07-14T14:30:00.303014,0.0,0.0

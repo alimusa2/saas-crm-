@@ -1,0 +1,35 @@
+.container { padding: 28px; background: var(--bg-color); min-height: 100%; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.header h1 { font-size: 22px; font-weight: 700; }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.addBtn { display: flex; align-items: center; gap: 8px; background: var(--primary-color); color: white; padding: 10px 18px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; }
+.addBtn:hover { background: var(--primary-hover); }
+.stateMsg { text-align: center; padding: 60px; color: var(--text-secondary); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 22px; transition: all 0.2s; }
+.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.card.active { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(91,72,229,0.1); }
+.card.inactive { opacity: 0.75; }
+.cardTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cardIcon { width: 44px; height: 44px; background: var(--sidebar-active-bg); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
+.toggleBtn { background: none; border: none; cursor: pointer; padding: 0; }
+.cardTitle { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.cardDesc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px; }
+.triggerBadge { display: inline-flex; align-items: center; gap: 6px; background: #F1F5F9; color: var(--text-secondary); border-radius: var(--radius-md); padding: 5px 10px; font-size: 12px; font-weight: 500; }
+.statusLabel { font-size: 12px; font-weight: 600; margin-top: 12px; }
+.labelActive { color: var(--success-color); }
+.labelInactive { color: var(--text-tertiary); }
+.emptyState { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; padding: 80px; color: var(--text-tertiary); text-align: center; }
+.emptyState h3 { font-size: 18px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { background: var(--surface-color); border-radius: var(--radius-xl); padding: 28px; width: 520px; max-width: 95vw; }
+.modalHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modalHeader h2 { font-size: 18px; font-weight: 700; }
+.formGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.formGroup label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.formGroup input, .formGroup select, .formGroup textarea { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical; }
+.formGroup input:focus, .formGroup select:focus, .formGroup textarea:focus { outline: none; border-color: var(--primary-color); }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; }
+.cancelBtn { padding: 9px 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; }
+.submitBtn { padding: 9px 20px; background: var(--primary-color); color: white; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; }
+.submitBtn:hover { background: var(--primary-hover); }

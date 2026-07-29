@@ -1,0 +1,75 @@
+.container { padding: 28px; background: var(--bg-color); min-height: 100%; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.header h1 { font-size: 22px; font-weight: 700; }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.addBtn { display: flex; align-items: center; gap: 8px; background: var(--primary-color); color: white; padding: 10px 18px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.addBtn:hover { background: var(--primary-hover); }
+.stateMsg { text-align: center; padding: 60px; color: var(--text-secondary); }
+.emptyState { text-align: center; padding: 80px 20px; color: var(--text-tertiary); }
+.emptyState h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+.dayGroup { margin-bottom: 28px; }
+.dayLabel { font-size: 13px; font-weight: 600; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 4px; }
+.apptList { display: flex; flex-direction: column; gap: 10px; }
+.apptCard { background: var(--surface-color); border-radius: var(--radius-lg); padding: 18px 20px; border-left: 4px solid var(--primary-color); box-shadow: var(--shadow-card); display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: box-shadow 0.2s; }
+.apptCard:hover { box-shadow: var(--shadow-md); }
+.apptMain { flex: 1; }
+.apptTitle { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.apptDesc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.apptMeta { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--text-tertiary); }
+.apptMeta span { display: flex; align-items: center; gap: 5px; }
+.apptActions { flex-shrink: 0; }
+.statusSelect { border: 1px solid; border-radius: var(--radius-md); padding: 6px 10px; font-size: 12px; font-weight: 600; background: white; cursor: pointer; }
+
+/* Tabs system */
+.tabsContainer { display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; padding-bottom: 8px; }
+.tabButton { background: transparent; border: none; padding: 8px 16px; font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-radius: var(--radius-md); transition: all 0.15s; }
+.tabButton:hover { color: var(--text-main); background: #f3f4f6; }
+.activeTab { color: var(--primary-color) !important; background: var(--primary-bg) !important; font-weight: 600; }
+
+/* Filter bar components */
+.filtersBar { display: flex; flex-direction: column; gap: 12px; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+.searchBox { position: relative; display: flex; align-items: center; }
+.searchBox svg { position: absolute; left: 12px; color: var(--text-tertiary); pointer-events: none; }
+.searchBox input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; background-color: var(--surface-color); color: var(--text-main); outline: none; transition: border-color 0.15s; }
+.searchBox input:focus { border-color: var(--primary-color); }
+.filtersGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.filtersGrid select,
+.filtersGrid input[type="text"] { padding: 6px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 12px; background-color: var(--surface-color); color: var(--text-main); outline: none; cursor: pointer; }
+
+/* Summary card styles */
+.leadSummaryCard { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 14px; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.leadSummaryCard h4 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-main); }
+.leadCardGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px; color: var(--text-secondary); }
+.leadCardGrid span strong { color: var(--text-main); }
+
+/* Analytics reporting */
+.statsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.statCard { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 4px; }
+.statNumber { font-size: 26px; font-weight: 700; color: var(--primary-color); }
+.statLabel { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 500; letter-spacing: 0.02em; }
+.analyticsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.analyticsCard { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
+.analyticsCard h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+.distributionList { display: flex; flex-direction: column; gap: 8px; }
+.distributionItem { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
+.distributionItem span:first-child { font-weight: 500; color: var(--text-main); }
+
+/* Email Template Editor */
+.editorBox { display: flex; flex-direction: column; gap: 16px; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+.variablesHint { font-size: 12px; color: var(--text-secondary); background-color: #f8fafc; padding: 12px; border-radius: var(--radius-md); line-height: 1.5; border: 1px solid #e2e8f0; }
+
+/* Form and Select designs */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
+.modal { background: var(--surface-color); border-radius: var(--radius-xl); padding: 28px; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modalHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modalHeader h2 { font-size: 18px; font-weight: 700; }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.formGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.formGroup label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.formGroup input, .formGroup select, .formGroup textarea { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical; background-color: white; color: var(--text-main); }
+.formGroup input:focus, .formGroup select:focus, .formGroup textarea:focus { outline: none; border-color: var(--primary-color); }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.cancelBtn { padding: 9px 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; transition: background 0.15s; background: white; cursor: pointer; }
+.cancelBtn:hover:not(:disabled) { background: #f3f4f6; }
+.submitBtn { padding: 9px 20px; background: var(--primary-color); color: white; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.2s; }
+.submitBtn:hover:not(:disabled) { background: var(--primary-hover); }

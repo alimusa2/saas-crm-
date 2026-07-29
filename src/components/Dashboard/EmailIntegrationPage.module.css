@@ -1,0 +1,325 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.pageHeaderIcon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #4285F4 0%, #EA4335 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+.pageTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 3px 0 0;
+}
+
+/* ── Banners ─────────────────────────────────────────────────────────────── */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+.bannerSuccess {
+  background: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #6EE7B7;
+}
+.bannerError {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FCA5A5;
+}
+
+/* ── Status card ─────────────────────────────────────────────────────────── */
+.statusCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.statusLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.statusConnected {
+  color: #059669;
+}
+.statusDisconnected {
+  color: #DC2626;
+}
+.gmailAddress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 4px 12px;
+  width: fit-content;
+}
+.connectedAt {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.notConnectedText {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 380px;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+.statusActions {
+  flex-shrink: 0;
+}
+.actionGroup {
+  display: flex;
+  gap: 10px;
+}
+.connectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: linear-gradient(135deg, #4285F4, #1a73e8);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+.connectBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
+.connectBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.testBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: var(--surface-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.testBtn:hover:not(:disabled) {
+  background: var(--bg-color);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.testBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.disconnectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: transparent;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.disconnectBtn:hover:not(:disabled) {
+  background: #FEF2F2;
+}
+.disconnectBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Provider info card ──────────────────────────────────────────────────── */
+.providerCard {
+  padding: 20px 24px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+.providerHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.gmailBadge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.providerLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 2px 10px;
+}
+.providerDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.scopeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.scopeItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  color: #059669;
+}
+
+/* ── Dev info accordion ──────────────────────────────────────────────────── */
+.devInfo {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.devInfoSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s;
+}
+.devInfoSummary:hover {
+  background: var(--bg-color);
+}
+.devInfoBody {
+  padding: 0 20px 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  border-top: 1px solid var(--border-color);
+}
+.devInfoBody p {
+  margin: 12px 0 6px;
+}
+.devInfoBody ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.devInfoBody li {
+  margin-bottom: 4px;
+}
+.devInfoBody a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+.devInfoBody a:hover {
+  text-decoration: underline;
+}
+.devInfoBody code {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+.codeBlock {
+  background: #1a1a2e;
+  color: #a8ff78;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 10px 0;
+  line-height: 1.7;
+}
+
+/* ── Loading card ────────────────────────────────────────────────────────── */
+.loadingCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spinIcon {
+  animation: spin 1s linear infinite;
+}

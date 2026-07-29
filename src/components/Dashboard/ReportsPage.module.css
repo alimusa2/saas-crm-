@@ -1,0 +1,62 @@
+.container { padding: 28px; background: var(--bg-color); min-height: 100%; box-sizing: border-box; }
+
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+.header h1 { font-size: 22px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+.actionsGroup { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.selectControl { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 14px; font-size: 13px; font-weight: 600; background: var(--surface-color); color: var(--text-primary); cursor: pointer; outline: none; }
+.selectControl:focus { border-color: var(--primary-color); }
+
+.actionBtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--surface-color); font-size: 13px; font-weight: 600; color: var(--text-primary); cursor: pointer; transition: all 0.15s; }
+.actionBtn:hover { background: var(--bg-color); border-color: #CBD5E1; }
+.primaryBtn { background: var(--primary-color); color: white; border: none; }
+.primaryBtn:hover { background: var(--primary-hover); }
+
+/* Stats KPI Row */
+.statsRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.statCard { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px 22px; display: flex; align-items: center; gap: 16px; min-height: 100px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: transform 0.15s, box-shadow 0.15s; }
+.statCard:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.04); }
+
+.statIcon { width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.statValue { font-size: 24px; font-weight: 800; color: var(--text-primary); line-height: 1.2; margin-bottom: 2px; }
+.statLabel { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+.statSub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; white-space: nowrap; }
+
+/* Charts Grid */
+.chartsGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.chartCard { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+.chartHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.chartHeader h3 { font-size: 15px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.chartBadge { font-size: 11.5px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-color); padding: 4px 10px; border-radius: 99px; }
+
+/* Task Radial Chart Layout */
+.taskStats { display: flex; align-items: center; justify-content: space-around; gap: 24px; min-height: 260px; padding: 12px 0; }
+.taskRing { position: relative; width: 160px; height: 160px; flex-shrink: 0; }
+.ringChart { width: 100%; height: 100%; }
+.ringLabel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.ringPct { display: block; font-size: 30px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.ringText { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+.taskBreakdown { display: flex; flex-direction: column; gap: 14px; }
+.taskStat { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+
+.stateMsg { text-align: center; padding: 60px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+.errorMsg { text-align: center; padding: 40px; color: var(--danger-color); font-size: 14px; font-weight: 600; }
+
+@media (max-width: 1200px) {
+  .statsRow { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .chartsGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .container { padding: 16px; }
+  .statsRow { grid-template-columns: 1fr; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .actionsGroup { width: 100%; justify-content: space-between; }
+  .taskStats { flex-direction: column; }
+}

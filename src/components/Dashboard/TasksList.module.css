@@ -1,0 +1,127 @@
+.card {
+  background-color: var(--surface-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.viewAll {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.viewAll:hover {
+  text-decoration: underline;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.taskLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.radio {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.radio:hover {
+  border-color: var(--primary-color);
+}
+
+.radioChecked {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+}
+
+.radioChecked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: white;
+}
+
+.taskTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.taskSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.taskDate {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dateToday {
+  color: var(--danger-color);
+}
+
+.dateTomorrow {
+  color: var(--warning-color);
+}
+
+.dateOther {
+  color: var(--text-secondary);
+}
+
+.stateMsg {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.errorMsg {
+  padding: 12px;
+  background: #FEF2F2;
+  color: #DC2626;
+  border-radius: 6px;
+  font-size: 13px;
+}

@@ -1,0 +1,56 @@
+.container { padding: 28px; background: var(--bg-color); min-height: 100%; box-sizing: border-box; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+.header h1 { font-size: 22px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+.addBtn { display: flex; align-items: center; gap: 8px; background: var(--primary-color); color: white; padding: 10px 18px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+.addBtn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.searchBar { display: flex; align-items: center; gap: 10px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 24px; transition: border-color 0.15s; }
+.searchBar:focus-within { border-color: var(--primary-color); }
+.searchIcon { color: var(--text-tertiary); flex-shrink: 0; }
+.searchInput { flex: 1; border: none; background: none; font-size: 14px; font-family: inherit; outline: none; color: var(--text-primary); }
+
+/* Contacts Grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+.card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px; display: flex; align-items: flex-start; gap: 14px; transition: all 0.2s; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #CBD5E1; }
+
+.avatar { width: 46px; height: 46px; background: #EEF2FF; color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0; text-transform: uppercase; border: 1px solid #E0E7FF; }
+
+.cardInfo { flex: 1; min-width: 0; overflow: hidden; }
+.cardInfo h3 { font-size: 15px; font-weight: 700; margin: 0 0 4px 0; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.infoRow { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.infoRow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Responsive & Properly Formatted Delete Button */
+.deleteBtn { background: #FEF2F2; border: 1px solid #FECACA; color: #EF4444; padding: 7px; border-radius: var(--radius-md); cursor: pointer; transition: all 0.15s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; align-self: flex-start; }
+.deleteBtn:hover { background: #FEE2E2; color: #DC2626; border-color: #FCA5A5; transform: scale(1.06); }
+.deleteBtn:active { transform: scale(0.96); }
+
+.emptyState { text-align: center; padding: 60px 20px; color: var(--text-tertiary); font-size: 14px; }
+
+/* Modal Overlay & Dialog */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; box-sizing: border-box; }
+.modal { background: var(--surface-color); border-radius: var(--radius-xl); padding: 28px; width: 520px; max-width: 100%; maxHeight: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+.modal h2 { font-size: 18px; font-weight: 700; margin: 0 0 20px 0; color: var(--text-primary); }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.formGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.formGroup label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.formGroup input { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 9px 12px; font-size: 13.5px; font-family: inherit; background: var(--surface-color); }
+.formGroup input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; }
+.cancelBtn { padding: 9px 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13.5px; font-weight: 500; background: var(--surface-color); cursor: pointer; }
+.cancelBtn:hover { background: var(--bg-color); }
+.submitBtn { padding: 9px 20px; background: var(--primary-color); color: white; border-radius: var(--radius-md); font-size: 13.5px; font-weight: 600; border: none; cursor: pointer; }
+.submitBtn:hover { background: var(--primary-hover); }
+
+@media (max-width: 600px) {
+  .container { padding: 16px; }
+  .grid { grid-template-columns: 1fr; }
+  .formRow { grid-template-columns: 1fr; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .addBtn { width: 100%; justify-content: center; }
+}
