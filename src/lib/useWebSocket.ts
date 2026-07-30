@@ -79,10 +79,19 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
     connect();
     return () => {
       if (socketRef.current) {
-        if ((socketRef.current as any)._pingInterval) {
-          clearInterval((socketRef.current as any)._pingInterval);
+        const ws = socketRef.current;
+        if ((ws as any)._pingInterval) {
+          clearInterval((ws as any)._pingInterval);
         }
-        socketRef.current.close();
+        
+        // Prevent Strict Mode 'closed before connection established' warning
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try { ws.close(); } catch (e) {}
+          };
+        } else if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
         socketRef.current = null;
       }
       if (reconnectTimerRef.current) {
