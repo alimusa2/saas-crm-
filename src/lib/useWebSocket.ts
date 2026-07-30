@@ -10,6 +10,12 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
   const { user } = useAuth();
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<any>(null);
+  const onEventRef = useRef(onEvent);
+
+  // Keep latest onEvent callback in ref without re-triggering effect
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   const orgId = (user as any)?.org || (user as any)?.organization_id || 'default_org';
 
@@ -20,6 +26,10 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
     const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/${orgId}`;
 
     try {
+      if (socketRef.current && (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
+
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -37,8 +47,8 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
         if (event.data === 'pong') return;
         try {
           const parsed: WebSocketEvent = JSON.parse(event.data);
-          if (onEvent) {
-            onEvent(parsed);
+          if (onEventRef.current) {
+            onEventRef.current(parsed);
           }
         } catch (err) {
           // Non-JSON message
@@ -63,7 +73,7 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
     } catch (e) {
       // Ignore WebSocket connection error
     }
-  }, [orgId, onEvent]);
+  }, [orgId]);
 
   useEffect(() => {
     connect();
@@ -73,6 +83,7 @@ export const useWebSocket = (onEvent?: (event: WebSocketEvent) => void) => {
           clearInterval((socketRef.current as any)._pingInterval);
         }
         socketRef.current.close();
+        socketRef.current = null;
       }
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
