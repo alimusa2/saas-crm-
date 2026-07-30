@@ -31,7 +31,10 @@ async def get_reports_overview(
     assigned_contacts = perm_ctx["assigned_contacts"]
     assigned_deals = perm_ctx["assigned_deals"]
 
-    # 1. Leads query
+    import asyncio
+    from app.modules.payments.models import Invoice
+
+    # 1. Prepare query statements
     leads_stmt = select(Lead).where(Lead.organization_id == org_id)
     if not is_admin:
         conds = []
@@ -40,11 +43,35 @@ async def get_reports_overview(
         if assigned_contacts: conds.append(Lead.id.in_(assigned_contacts))
         if conds: leads_stmt = leads_stmt.where(or_(*conds))
 
-    leads_res = await db.execute(leads_stmt)
+    deals_stmt = select(Deal).where(Deal.organization_id == org_id)
+    if not is_admin:
+        conds = []
+        if u_id: conds.append(Deal.owner_id == u_id)
+        if m_id: conds.append(Deal.owner_id == m_id)
+        if assigned_deals: conds.append(Deal.id.in_(assigned_deals))
+        if conds: deals_stmt = deals_stmt.where(or_(*conds))
+
+    tasks_stmt = select(Task).where(Task.organization_id == org_id)
+    if not is_admin:
+        conds = []
+        if u_id: conds.extend([Task.assigned_to_id == u_id, Task.owner_id == u_id, Task.assigned_by_id == u_id])
+        if m_id: conds.append(Task.assigned_to_id == m_id)
+        if conds: tasks_stmt = tasks_stmt.where(or_(*conds))
+
+    inv_stmt = select(Invoice).where(Invoice.organization_id == org_id)
+
+    # 2. Execute all 4 queries concurrently in parallel
+    leads_res, deals_res, tasks_res, inv_res = await asyncio.gather(
+        db.execute(leads_stmt),
+        db.execute(deals_stmt),
+        db.execute(tasks_stmt),
+        db.execute(inv_stmt)
+    )
+
+    # 3. Process results
     leads_list = list(leads_res.scalars().all())
     total_leads = len(leads_list)
 
-    # Leads by status
     lead_status_counts = {}
     lead_source_counts = {}
     for l in leads_list:
@@ -58,18 +85,7 @@ async def get_reports_overview(
     if not leads_by_source:
         leads_by_source = [{"source": "Direct / Web", "count": total_leads or 1}]
 
-    # 2. Deals query
-    deals_stmt = select(Deal).where(Deal.organization_id == org_id)
-    if not is_admin:
-        conds = []
-        if u_id: conds.append(Deal.owner_id == u_id)
-        if m_id: conds.append(Deal.owner_id == m_id)
-        if assigned_deals: conds.append(Deal.id.in_(assigned_deals))
-        if conds: deals_stmt = deals_stmt.where(or_(*conds))
-
-    deals_res = await db.execute(deals_stmt)
     deals_list = list(deals_res.scalars().all())
-
     deal_status_counts = {}
     deal_status_values = {}
     total_won_revenue = 0.0
@@ -90,23 +106,10 @@ async def get_reports_overview(
         for st, cnt in deal_status_counts.items()
     ]
 
-    # 3. Tasks query
-    tasks_stmt = select(Task).where(Task.organization_id == org_id)
-    if not is_admin:
-        conds = []
-        if u_id: conds.extend([Task.assigned_to_id == u_id, Task.owner_id == u_id, Task.assigned_by_id == u_id])
-        if m_id: conds.append(Task.assigned_to_id == m_id)
-        if conds: tasks_stmt = tasks_stmt.where(or_(*conds))
-
-    tasks_res = await db.execute(tasks_stmt)
     tasks_list = list(tasks_res.scalars().all())
     tasks_completed = sum(1 for t in tasks_list if t.is_completed or t.status == "Completed")
     tasks_pending = len(tasks_list) - tasks_completed
 
-    # 4. Invoices query
-    from app.modules.payments.models import Invoice
-    inv_stmt = select(Invoice).where(Invoice.organization_id == org_id)
-    inv_res = await db.execute(inv_stmt)
     invoices_list = list(inv_res.scalars().all())
     paid_invoices_revenue = sum(float(i.amount or 0) for i in invoices_list if i.status == "Paid")
     invoices_paid_count = sum(1 for i in invoices_list if i.status == "Paid")

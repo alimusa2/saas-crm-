@@ -52,7 +52,7 @@ function AppContent() {
 
   const renderContent = () => {
     // Role-based Route Protection
-    const adminOnlyTabs = ['Team', 'Employees', 'Employees / Team', 'Employee Performance', 'Automations', 'Email Campaigns', 'Reports', 'Payments', 'Integrations'];
+    const adminOnlyTabs = ['Team', 'Employees', 'Employees / Team', 'Employee Performance', 'Automations', 'Email Campaigns', 'Reports', 'Integrations'];
     if (!isAdmin && adminOnlyTabs.includes(activeTab)) {
       return (
         <div style={{ padding: '60px 24px', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>

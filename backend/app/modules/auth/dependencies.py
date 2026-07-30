@@ -14,10 +14,10 @@ async def get_current_active_user(
     current_user: dict = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service)
 ) -> User:
-    """Resolve the current authenticated user; raises 404/400 if absent or inactive."""
+    """Resolve the current authenticated user; raises 401/400 if absent or inactive."""
     user = await auth_service.get_user_by_id(current_user["sub"])
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return user

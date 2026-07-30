@@ -6,6 +6,7 @@ import {
   Plus, DollarSign, FileText, CreditCard, X, Search,
   AlertTriangle, CheckCircle2, XCircle, Send, Trash2, RefreshCw, Clock
 } from 'lucide-react';
+import { useAuth } from '../../lib/AuthContext';
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   Draft: { bg: '#F1F5F9', color: '#64748B' },
@@ -30,6 +31,9 @@ function generateInvoiceNumber(existingInvoices: Invoice[]): string {
 }
 
 export const PaymentsPage = () => {
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.is_superuser || user?.role === 'Admin' || user?.role === 'Owner');
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -556,14 +560,16 @@ export const PaymentsPage = () => {
                         </>
                       )}
 
-                      <button
-                        type="button"
-                        className={`${styles.actionBtn} ${styles.deleteAction}`}
-                        title="Delete Invoice"
-                        onClick={() => handleDeleteInvoice(inv)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className={`${styles.actionBtn} ${styles.deleteAction}`}
+                          title="Delete Invoice"
+                          onClick={() => handleDeleteInvoice(inv)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

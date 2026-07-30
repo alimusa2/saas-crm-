@@ -41,15 +41,30 @@ async def login(
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: dict = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get current logged in user profile.
     """
     user = await auth_service.get_user_by_id(current_user["sub"])
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    from app.modules.auth.dependencies import get_employee_context
+    emp_ctx = await get_employee_context(user, db)
+    
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
+        is_superuser=user.is_superuser,
+        organization_id=user.organization_id,
+        role=emp_ctx.get("role", "Admin" if user.is_superuser else "Employee"),
+        team_member_id=emp_ctx.get("team_member_id")
+    )
 
 @router.get("/audit-logs")
 async def get_audit_logs(

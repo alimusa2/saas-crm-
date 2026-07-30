@@ -155,7 +155,7 @@ class EmailLogService:
             msg_obj = Message(
                 subject=rendered_subject,
                 body=rendered_html,
-                sender_id="system",
+                sender_id=None,
                 lead_id=obj_in.lead_id,
                 contact_id=variables.get("contact_id") if isinstance(variables, dict) else None,
                 is_read=True,

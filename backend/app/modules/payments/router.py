@@ -18,18 +18,16 @@ def get_payment_service(db: AsyncSession = Depends(get_db)) -> PaymentService:
 @router.get("/invoices", response_model=List[InvoiceResponse])
 async def list_invoices(
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
-    """List all invoices for the organization."""
-    return await payment_service.get_invoices(current_user["org"])
+    """List invoices for the organization (scoped to assigned leads for employees)."""
+    return await payment_service.get_invoices(current_user["org"], current_user=current_user)
 
 @router.post("/invoices", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
 async def create_invoice(
     inv_in: InvoiceCreate,
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
     """Create a new invoice."""
     return await payment_service.create_invoice(inv_in, current_user["org"])
@@ -39,8 +37,7 @@ async def update_invoice(
     invoice_id: str,
     inv_in: InvoiceUpdate,
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
     """Update an invoice status."""
     invoice = await payment_service.update_invoice(invoice_id, inv_in, current_user["org"])
@@ -52,8 +49,7 @@ async def update_invoice(
 async def send_invoice_reminder(
     invoice_id: str,
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
     """Send payment due reminder email to the recipient."""
     inv = await payment_service.send_reminder(invoice_id, current_user["org"])
@@ -87,8 +83,7 @@ async def trigger_auto_reminders(
 @router.get("/payments", response_model=List[PaymentResponse])
 async def list_payments(
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
     """List all payments for the organization."""
     return await payment_service.get_payments(current_user["org"])
@@ -97,8 +92,7 @@ async def list_payments(
 async def record_payment(
     pay_in: PaymentCreate,
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
     """Record a payment against an invoice."""
     return await payment_service.create_payment(pay_in, current_user["org"])

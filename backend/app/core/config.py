@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_REGION: str = ""
     CLOUDINARY_URL: str = ""  # e.g. cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:

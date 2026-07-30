@@ -92,8 +92,15 @@ class InboxService:
             msg.contact_id = None
             if recipient_user_id:
                 msg.recipient_id = recipient_user_id
-            if sender_user_id and msg.sender_id == "system":
+            if sender_user_id:
                 msg.sender_id = sender_user_id
+            elif msg.sender_id == "system":
+                msg.sender_id = None
+        else:
+            if sender_user_id:
+                msg.sender_id = sender_user_id
+            elif msg.sender_id == "system":
+                msg.sender_id = None
                 
         # Link integration fields if provided
         if variables:
@@ -104,18 +111,23 @@ class InboxService:
                 msg.automation_source = variables.get("workflow_name")
             elif "action_name" in variables:
                 msg.automation_source = variables.get("action_name")
-            elif msg.sender_id == "system":
+            elif msg.automation_source is None:
                 msg.automation_source = "System Notification"
 
     async def get_messages(
         self,
         organization_id: str,
         user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+        include_full_body: bool = False,
         lead_id: Optional[str] = None,
         contact_id: Optional[str] = None,
+        thread_id: Optional[str] = None,
     ) -> List[Message]:
-        """Return all messages for an org, optionally filtered by lead or contact."""
+        """Return messages for an org with pagination, optional thread filtering, and body truncation."""
         from app.modules.auth.models import User
+        import copy
         
         res_usr = await self.db.execute(select(User).where(User.id == user_id))
         user = res_usr.scalars().first()
@@ -127,7 +139,10 @@ class InboxService:
             stmt = stmt.where(Message.lead_id == lead_id)
         if contact_id:
             stmt = stmt.where(Message.contact_id == contact_id)
-        stmt = stmt.order_by(Message.created_at.desc())
+        if thread_id:
+            stmt = stmt.where(Message.gmail_thread_id == thread_id)
+
+        stmt = stmt.order_by(Message.created_at.desc()).offset(skip).limit(limit)
         result = await self.db.execute(stmt)
         messages = list(result.scalars().all())
 
@@ -149,7 +164,23 @@ class InboxService:
                 if is_sender or is_recipient or is_assigned_contact:
                     filtered.append(msg)
                 
+        if not include_full_body:
+            truncated = []
+            for m in filtered:
+                if m.body and len(m.body) > 300:
+                    m_copy = copy.copy(m)
+                    m_copy.body = m.body[:300] + "..."
+                    truncated.append(m_copy)
+                else:
+                    truncated.append(m)
+            return truncated
+
         return filtered
+
+    async def get_message_by_id(self, message_id: str, organization_id: str) -> Optional[Message]:
+        stmt = select(Message).where(Message.id == message_id, Message.organization_id == organization_id)
+        res = await self.db.execute(stmt)
+        return res.scalars().first()
 
     async def send_message(
         self,

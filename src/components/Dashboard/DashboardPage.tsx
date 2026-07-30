@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styles from './DashboardPage.module.css';
 import { Calendar as CalendarIcon, Users, CalendarDays, Percent, DollarSign, CheckSquare, LogOut, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { crmApi, tasksApi, pipelineApi, calendarApi, funnelsApi, type Lead, type Task, type Deal } from '../../lib/api';
+import { crmApi, tasksApi, pipelineApi, calendarApi, funnelsApi, paymentsApi, type Lead, type Task, type Deal } from '../../lib/api';
 
 import { StatCard } from './StatCard';
 import { LeadsOverviewChart } from './LeadsOverviewChart';
@@ -45,25 +45,29 @@ export const DashboardPage = () => {
   const loadDashboardData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [leadsData, tasksData, dealsData, apptsData] = await Promise.all([
+      const [leadsData, tasksData, dealsData, apptsData, invoicesData] = await Promise.all([
         crmApi.getLeads(0, 500).catch(() => []),
         tasksApi.getTasks().catch(() => []),
         pipelineApi.getDeals().catch(() => []),
-        calendarApi.getAppointments().catch(() => [])
+        calendarApi.getAppointments().catch(() => []),
+        paymentsApi.getInvoices().catch(() => [])
       ]);
 
       const leadsArr = Array.isArray(leadsData) ? leadsData : [];
       const tasksArr = Array.isArray(tasksData) ? tasksData : [];
       const dealsArr = Array.isArray(dealsData) ? dealsData : [];
       const apptsArr = Array.isArray(apptsData) ? apptsData : [];
+      const invsArr = Array.isArray(invoicesData) ? invoicesData : [];
 
       // 1. Total Leads & Conversion
       const totalLeads = leadsArr.length;
       const qualified = leadsArr.filter(l => l.status === 'Qualified' || l.status === 'Contacted' || l.status === 'Won').length;
       const conversionRateVal = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) + '%' : '0.0%';
 
-      // 2. Revenue calculation from Deals
-      const totalRevNumber = dealsArr.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+      // 2. Revenue calculation (Paid Invoices first, fallback to Deals Pipeline Value)
+      const paidInvoicesTotal = invsArr.filter(i => i.status === 'Paid').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+      const pipelineDealsTotal = dealsArr.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+      const totalRevNumber = paidInvoicesTotal > 0 ? paidInvoicesTotal : pipelineDealsTotal;
       const formattedRev = `$${totalRevNumber.toLocaleString('en-US')}`;
 
       // 3. Appointments Count
@@ -98,12 +102,12 @@ export const DashboardPage = () => {
     }
   }, []);
 
-  // Initial fetch + 8 second real-time polling interval
+  // Initial fetch + 30 second real-time polling interval
   useEffect(() => {
     loadDashboardData();
     const interval = setInterval(() => {
       loadDashboardData();
-    }, 8000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadDashboardData]);
 

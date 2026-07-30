@@ -31,11 +31,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(u as Record<string, unknown>);
           setIsLoggedIn(true);
         })
-        .catch(() => clearToken())
+        .catch(() => {
+          clearToken();
+          setIsLoggedIn(false);
+          setUser(null);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearToken();
+      setIsLoggedIn(false);
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

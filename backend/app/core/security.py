@@ -65,7 +65,7 @@ async def get_current_user(
     from app.modules.team.models import TeamMember
     from sqlalchemy import select
     
-    if user_id and user_id != "system":
+    if user_id and user_id != "system" and not org_id:
         try:
             async with AsyncSessionLocal() as db:
                 res = await db.execute(select(User).where(User.id == user_id))

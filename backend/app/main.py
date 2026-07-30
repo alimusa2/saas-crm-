@@ -36,9 +36,16 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+        async def _get_cols(c, t_name: str):
+            if c.dialect.name == "sqlite":
+                r_cols = await c.execute(text(f"PRAGMA table_info({t_name})"))
+                return [r[1] for r in r_cols.fetchall()]
+            else:
+                r_cols = await c.execute(text(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{t_name}'"))
+                return [r[0] for r in r_cols.fetchall()]
+
         # Alter table task if task assignment columns do not exist
-        res = await conn.execute(text("PRAGMA table_info(task)"))
-        cols = [r[1] for r in res.fetchall()]
+        cols = await _get_cols(conn, "task")
         if "assigned_to_id" not in cols:
             await conn.execute(text("ALTER TABLE task ADD COLUMN assigned_to_id TEXT REFERENCES teammember(id)"))
         if "assigned_by_id" not in cols:
@@ -49,20 +56,17 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE task ADD COLUMN department TEXT"))
 
         # Alter table pipeline if status_stage_mapping does not exist
-        res_pipe = await conn.execute(text("PRAGMA table_info(pipeline)"))
-        cols_pipe = [r[1] for r in res_pipe.fetchall()]
+        cols_pipe = await _get_cols(conn, "pipeline")
         if "status_stage_mapping" not in cols_pipe:
             await conn.execute(text("ALTER TABLE pipeline ADD COLUMN status_stage_mapping JSON"))
 
         # Alter table workflowexecution if execution_metadata does not exist
-        res_exec = await conn.execute(text("PRAGMA table_info(workflowexecution)"))
-        cols_exec = [r[1] for r in res_exec.fetchall()]
+        cols_exec = await _get_cols(conn, "workflowexecution")
         if "execution_metadata" not in cols_exec:
             await conn.execute(text("ALTER TABLE workflowexecution ADD COLUMN execution_metadata JSON"))
 
         # Alter table appointment for participant columns
-        res_appt = await conn.execute(text("PRAGMA table_info(appointment)"))
-        cols_appt = [r[1] for r in res_appt.fetchall()]
+        cols_appt = await _get_cols(conn, "appointment")
         for col_name in ["related_entity_type", "related_entity_id", "display_name", "email", "phone"]:
             if col_name not in cols_appt:
                 await conn.execute(text(f"ALTER TABLE appointment ADD COLUMN {col_name} TEXT"))
@@ -70,15 +74,13 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE appointment ADD COLUMN assigned_to_id TEXT REFERENCES teammember(id)"))
 
         # Alter table invoice for recipient details
-        res_inv = await conn.execute(text("PRAGMA table_info(invoice)"))
-        cols_inv = [r[1] for r in res_inv.fetchall()]
+        cols_inv = await _get_cols(conn, "invoice")
         for col_name in ["related_entity_type", "related_entity_id", "recipient_name", "recipient_email", "recipient_phone", "recipient_company", "billing_address", "tax_information"]:
             if col_name not in cols_inv:
                 await conn.execute(text(f"ALTER TABLE invoice ADD COLUMN {col_name} TEXT"))
 
         # Alter table lead for address and tax details
-        res_lead = await conn.execute(text("PRAGMA table_info(lead)"))
-        cols_lead = [r[1] for r in res_lead.fetchall()]
+        cols_lead = await _get_cols(conn, "lead")
         for col_name in ["billing_address", "tax_information"]:
             if col_name not in cols_lead:
                 await conn.execute(text(f"ALTER TABLE lead ADD COLUMN {col_name} TEXT"))
@@ -87,23 +89,21 @@ async def lifespan(app: FastAPI):
         for col_name in ["automatic_score", "manual_score", "is_score_manual", "score_source", "score_history", "score_last_updated"]:
             if col_name not in cols_lead:
                 if col_name == "is_score_manual":
-                    await conn.execute(text(f"ALTER TABLE lead ADD COLUMN {col_name} BOOLEAN DEFAULT 0"))
+                    await conn.execute(text(f"ALTER TABLE lead ADD COLUMN {col_name} BOOLEAN DEFAULT FALSE"))
                 elif col_name in ["automatic_score", "manual_score"]:
                     await conn.execute(text(f"ALTER TABLE lead ADD COLUMN {col_name} INTEGER"))
                 else:
                     await conn.execute(text(f"ALTER TABLE lead ADD COLUMN {col_name} TEXT"))
 
         # Alter table organization for settings_json
-        res_org = await conn.execute(text("PRAGMA table_info(organization)"))
-        cols_org = [r[1] for r in res_org.fetchall()]
+        cols_org = await _get_cols(conn, "organization")
         if "settings_json" not in cols_org:
             await conn.execute(text("ALTER TABLE organization ADD COLUMN settings_json TEXT"))
 
         # Alter table teammember for missing fields
-        res_tm = await conn.execute(text("PRAGMA table_info(teammember)"))
-        cols_tm = [r[1] for r in res_tm.fetchall()]
+        cols_tm = await _get_cols(conn, "teammember")
         if "is_deleted" not in cols_tm:
-            await conn.execute(text("ALTER TABLE teammember ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE teammember ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE"))
         if "status" not in cols_tm:
             await conn.execute(text("ALTER TABLE teammember ADD COLUMN status TEXT DEFAULT 'Active'"))
         if "role" not in cols_tm:
@@ -116,29 +116,27 @@ async def lifespan(app: FastAPI):
                 await conn.execute(text(f"ALTER TABLE teammember ADD COLUMN {col_name} JSON"))
 
         # Alter table message for internal team inbox integration links
-        res_msg = await conn.execute(text("PRAGMA table_info(message)"))
-        cols_msg = [r[1] for r in res_msg.fetchall()]
+        cols_msg = await _get_cols(conn, "message")
         for col_name in ["task_id", "appointment_id", "invoice_id", "automation_source"]:
             if col_name not in cols_msg:
                 await conn.execute(text(f"ALTER TABLE message ADD COLUMN {col_name} TEXT"))
         if "is_ambiguous" not in cols_msg:
-            await conn.execute(text("ALTER TABLE message ADD COLUMN is_ambiguous BOOLEAN DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE message ADD COLUMN is_ambiguous BOOLEAN DEFAULT FALSE"))
         if "gmail_thread_id" not in cols_msg:
             await conn.execute(text("ALTER TABLE message ADD COLUMN gmail_thread_id TEXT"))
         if "company_id" not in cols_msg:
             await conn.execute(text("ALTER TABLE message ADD COLUMN company_id TEXT REFERENCES company(id)"))
         if "is_starred" not in cols_msg:
-            await conn.execute(text("ALTER TABLE message ADD COLUMN is_starred BOOLEAN DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE message ADD COLUMN is_starred BOOLEAN DEFAULT FALSE"))
         if "is_archived" not in cols_msg:
-            await conn.execute(text("ALTER TABLE message ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE message ADD COLUMN is_archived BOOLEAN DEFAULT FALSE"))
         if "is_unknown_contact" not in cols_msg:
-            await conn.execute(text("ALTER TABLE message ADD COLUMN is_unknown_contact BOOLEAN DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE message ADD COLUMN is_unknown_contact BOOLEAN DEFAULT FALSE"))
         if "attachments_metadata" not in cols_msg:
             await conn.execute(text("ALTER TABLE message ADD COLUMN attachments_metadata TEXT"))
 
         # Alter table gmailintegration for sync status and tracking fields
-        res_gmail = await conn.execute(text("PRAGMA table_info(gmailintegration)"))
-        cols_gmail = [r[1] for r in res_gmail.fetchall()]
+        cols_gmail = await _get_cols(conn, "gmailintegration")
         if "last_synced_at" not in cols_gmail:
             await conn.execute(text("ALTER TABLE gmailintegration ADD COLUMN last_synced_at TIMESTAMP"))
         if "sync_status" not in cols_gmail:
@@ -146,23 +144,19 @@ async def lifespan(app: FastAPI):
         if "last_sync_message" not in cols_gmail:
             await conn.execute(text("ALTER TABLE gmailintegration ADD COLUMN last_sync_message TEXT"))
 
-
         # Alter table contact for address and tax details
-        res_contact = await conn.execute(text("PRAGMA table_info(contact)"))
-        cols_contact = [r[1] for r in res_contact.fetchall()]
+        cols_contact = await _get_cols(conn, "contact")
         for col_name in ["billing_address", "tax_information"]:
             if col_name not in cols_contact:
                 await conn.execute(text(f"ALTER TABLE contact ADD COLUMN {col_name} TEXT"))
 
         # Alter table company for tax details
-        res_company = await conn.execute(text("PRAGMA table_info(company)"))
-        cols_company = [r[1] for r in res_company.fetchall()]
+        cols_company = await _get_cols(conn, "company")
         if "tax_information" not in cols_company:
             await conn.execute(text("ALTER TABLE company ADD COLUMN tax_information TEXT"))
 
         # Alter table activity for contact_id
-        res_act = await conn.execute(text("PRAGMA table_info(activity)"))
-        cols_act = [r[1] for r in res_act.fetchall()]
+        cols_act = await _get_cols(conn, "activity")
         if "contact_id" not in cols_act:
             await conn.execute(text("ALTER TABLE activity ADD COLUMN contact_id TEXT REFERENCES contact(id)"))
         if "task_id" not in cols_act:
@@ -171,8 +165,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE activity ADD COLUMN appointment_id TEXT REFERENCES appointment(id)"))
 
         # Alter table funnel for publish status and metadata
-        res_funnel = await conn.execute(text("PRAGMA table_info(funnel)"))
-        cols_funnel = [r[1] for r in res_funnel.fetchall()]
+        cols_funnel = await _get_cols(conn, "funnel")
         if "status" not in cols_funnel:
             await conn.execute(text("ALTER TABLE funnel ADD COLUMN status TEXT DEFAULT 'Draft'"))
         if "published_url" not in cols_funnel:
@@ -181,8 +174,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE funnel ADD COLUMN published_at TIMESTAMP"))
 
         # Alter table funnelstep for simple page attributes
-        res_step = await conn.execute(text("PRAGMA table_info(funnelstep)"))
-        cols_step = [r[1] for r in res_step.fetchall()]
+        cols_step = await _get_cols(conn, "funnelstep")
         for col_name in ["title", "heading", "paragraph_text", "image_url", "button_text", "background_color"]:
             if col_name not in cols_step:
                 await conn.execute(text(f"ALTER TABLE funnelstep ADD COLUMN {col_name} TEXT"))
@@ -196,8 +188,7 @@ async def lifespan(app: FastAPI):
                     await conn.execute(text(f"ALTER TABLE funnelstep ADD COLUMN {col_name} TEXT"))
 
         # Alter table funnelvisit for tracking attributes
-        res_visit = await conn.execute(text("PRAGMA table_info(funnelvisit)"))
-        cols_visit = [r[1] for r in res_visit.fetchall()]
+        cols_visit = await _get_cols(conn, "funnelvisit")
         if "event_type" not in cols_visit:
             await conn.execute(text("ALTER TABLE funnelvisit ADD COLUMN event_type TEXT DEFAULT 'page_view'"))
         if "referrer" not in cols_visit:
@@ -212,6 +203,25 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE funnelvisit ADD COLUMN utm_term TEXT"))
         if "utm_content" not in cols_visit:
             await conn.execute(text("ALTER TABLE funnelvisit ADD COLUMN utm_content TEXT"))
+
+        # Create composite database indexes for fast query execution
+        indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_lead_org_owner ON lead(organization_id, owner_id)",
+            "CREATE INDEX IF NOT EXISTS idx_contact_org ON contact(organization_id)",
+            "CREATE INDEX IF NOT EXISTS idx_message_org_created ON message(organization_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_message_lead ON message(lead_id)",
+            "CREATE INDEX IF NOT EXISTS idx_message_contact ON message(contact_id)",
+            "CREATE INDEX IF NOT EXISTS idx_task_org_due ON task(organization_id, due_date)",
+            "CREATE INDEX IF NOT EXISTS idx_tasklead_task ON tasklead(task_id, organization_id)",
+            "CREATE INDEX IF NOT EXISTS idx_activity_lead ON activity(lead_id, organization_id)",
+            "CREATE INDEX IF NOT EXISTS idx_deal_org_stage ON deal(organization_id, stage_id)",
+            "CREATE INDEX IF NOT EXISTS idx_teammember_org_user ON teammember(organization_id, user_id)",
+        ]
+        for idx_sql in indexes:
+            try:
+                await conn.execute(text(idx_sql))
+            except Exception:
+                pass
 
 
 

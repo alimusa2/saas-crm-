@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from datetime import datetime, timezone
 from app.modules.payments.models import Invoice, Payment
 from app.modules.payments.schemas import InvoiceCreate, InvoiceUpdate, PaymentCreate
@@ -127,11 +127,48 @@ class PaymentService:
         except Exception as e:
             logger.warning(f"Failed to create invoice activity log: {e}")
 
-    async def get_invoices(self, organization_id: str) -> List[Invoice]:
-        result = await self.db.execute(
-            select(Invoice).where(Invoice.organization_id == organization_id)
-            .order_by(Invoice.created_at.desc())
-        )
+    async def get_invoices(self, organization_id: str, current_user: Optional[dict] = None) -> Sequence[Invoice]:
+        stmt = select(Invoice).where(Invoice.organization_id == organization_id)
+
+        if current_user and not current_user.get("is_superuser") and current_user.get("role") != "Admin":
+            from app.core.permissions import get_employee_permissions_context
+            from app.modules.crm.models import Lead
+            from sqlalchemy import or_
+
+            perm_ctx = await get_employee_permissions_context(self.db, current_user)
+            if not perm_ctx["is_admin"]:
+                u_id = perm_ctx["user_id"]
+                assigned_contacts = perm_ctx["assigned_contacts"] or []
+
+                lead_conditions = []
+                if u_id:
+                    lead_conditions.append(Lead.owner_id == u_id)
+                if assigned_contacts:
+                    lead_conditions.append(Lead.id.in_(assigned_contacts))
+
+                user_lead_ids = []
+                if lead_conditions:
+                    lead_stmt = select(Lead.id).where(
+                        Lead.organization_id == organization_id,
+                        or_(*lead_conditions)
+                    )
+                    l_res = await self.db.execute(lead_stmt)
+                    user_lead_ids = list(l_res.scalars().all())
+
+                conds = []
+                if user_lead_ids:
+                    conds.append(Invoice.lead_id.in_(user_lead_ids))
+                    conds.append(Invoice.related_entity_id.in_(user_lead_ids))
+                if assigned_contacts:
+                    conds.append(Invoice.contact_id.in_(assigned_contacts))
+                    conds.append(Invoice.related_entity_id.in_(assigned_contacts))
+
+                if conds:
+                    stmt = stmt.where(or_(*conds))
+                else:
+                    return []
+
+        result = await self.db.execute(stmt.order_by(Invoice.created_at.desc()))
         return result.scalars().all()
 
     async def create_invoice(self, inv_in: InvoiceCreate, organization_id: str) -> Invoice:

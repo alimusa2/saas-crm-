@@ -22,6 +22,10 @@ class TaskService:
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Failed checking overdue tasks: {e}")
+            try:
+                await self.db.rollback()
+            except Exception:
+                pass
 
         stmt = select(Task).where(Task.organization_id == organization_id)
 
@@ -153,69 +157,90 @@ class TaskService:
             Task.due_date < now
         )
         result = await self.db.execute(stmt)
-        overdue_tasks = result.scalars().all()
-        for task in overdue_tasks:
-            # Fetch related lead IDs for this task
-            tl_res = await self.db.execute(
-                select(TaskLead.lead_id).where(
-                    TaskLead.task_id == task.id,
-                    TaskLead.organization_id == organization_id
-                )
+        overdue_tasks = list(result.scalars().all())
+        if not overdue_tasks:
+            return
+
+        task_ids = [t.id for t in overdue_tasks]
+
+        # Batch fetch all TaskLead relations in 1 query
+        tl_res = await self.db.execute(
+            select(TaskLead).where(
+                TaskLead.task_id.in_(task_ids),
+                TaskLead.organization_id == organization_id
             )
-            lead_ids = list(tl_res.scalars().all())
+        )
+        task_leads_map = {}
+        for r in tl_res.scalars().all():
+            task_leads_map.setdefault(r.task_id, []).append(r.lead_id)
+
+        # Batch fetch existing overdue Activities in 1 query
+        act_res = await self.db.execute(
+            select(Activity.task_id).where(
+                Activity.type == "Task Overdue",
+                Activity.task_id.in_(task_ids),
+                Activity.organization_id == organization_id
+            )
+        )
+        already_emitted = set([row for row in act_res.scalars().all() if row])
+
+        any_added = False
+        for task in overdue_tasks:
+            if task.id in already_emitted:
+                continue
+
+            lead_ids = task_leads_map.get(task.id, [])
             if task.lead_id and task.lead_id not in lead_ids:
                 lead_ids.append(task.lead_id)
 
-            # Check if warning already emitted
-            act_stmt = select(Activity).where(
-                Activity.type == "Task Overdue",
-                Activity.description.like(f"%Task ID: {task.id}%"),
-                Activity.organization_id == organization_id
-            )
-            act_res = await self.db.execute(act_stmt)
-            if not act_res.scalars().first():
-                # Publish event
-                await publish("task.overdue", GenericEvent(
-                    event_name="task.overdue",
-                    organization_id=organization_id,
-                    entity_id=task.id,
-                    trigger_name="task.overdue",
-                    data={
-                        "task_id": task.id,
-                        "title": task.title,
-                        "due_date": task.due_date.isoformat() if task.due_date else None,
-                        "lead_id": task.lead_id,
-                        "lead_ids": lead_ids,
-                        "department": task.department,
-                        "assigned_to_id": task.assigned_to_id
-                    }
-                ))
-                # Add system Activity log to prevent duplicate triggers
-                # and log to all related leads timeline
-                if lead_ids:
-                    for lead_id in lead_ids:
-                        act = Activity(
-                            type="Task Overdue",
-                            description=f"Task '{task.title}' became overdue. Task ID: {task.id}",
-                            lead_id=lead_id,
-                            task_id=task.id,
-                            author_id="system",
-                            timestamp=datetime.now(timezone.utc),
-                            organization_id=organization_id
-                        )
-                        self.db.add(act)
-                else:
-                    act = Activity(
+            await publish("task.overdue", GenericEvent(
+                event_name="task.overdue",
+                organization_id=organization_id,
+                entity_id=task.id,
+                trigger_name="task.overdue",
+                data={
+                    "task_id": task.id,
+                    "title": task.title,
+                    "due_date": task.due_date.isoformat() if task.due_date else None,
+                    "lead_id": task.lead_id,
+                    "lead_ids": lead_ids,
+                    "department": task.department,
+                    "assigned_to_id": task.assigned_to_id
+                }
+            ))
+
+            author_id = task.assigned_to_id or task.owner_id or task.assigned_by_id
+            if not author_id:
+                admin_res = await self.db.execute(select(User.id).where(User.organization_id == organization_id))
+                author_id = admin_res.scalars().first()
+            if not author_id:
+                continue
+
+            if lead_ids:
+                for l_id in lead_ids:
+                    self.db.add(Activity(
                         type="Task Overdue",
                         description=f"Task '{task.title}' became overdue. Task ID: {task.id}",
-                        lead_id=task.lead_id,
+                        lead_id=l_id,
                         task_id=task.id,
-                        author_id="system",
+                        author_id=author_id,
                         timestamp=datetime.now(timezone.utc),
                         organization_id=organization_id
-                    )
-                    self.db.add(act)
-                await self.db.commit()
+                    ))
+            else:
+                self.db.add(Activity(
+                    type="Task Overdue",
+                    description=f"Task '{task.title}' became overdue. Task ID: {task.id}",
+                    lead_id=task.lead_id,
+                    task_id=task.id,
+                    author_id=author_id,
+                    timestamp=datetime.now(timezone.utc),
+                    organization_id=organization_id
+                ))
+            any_added = True
+
+        if any_added:
+            await self.db.commit()
 
     async def log_task_activity(self, task: Task, lead_ids: List[str], event_type: str, author_id: str, organization_id: str):
         for lead_id in lead_ids:

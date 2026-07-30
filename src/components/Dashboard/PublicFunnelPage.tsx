@@ -1643,7 +1643,7 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
         }
         const data = await resp.json();
         setFunnel(data);
-        const stepsList = data.steps || [];
+        const stepsList = [...(data.steps || [])].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
         setSteps(stepsList);
         if (stepsList.length === 0) {
           throw new Error('Page not found');
@@ -1659,15 +1659,16 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
               sid === cleanTarget ||
               sname === cleanTarget ||
               stype === cleanTarget ||
-              sslug === cleanTarget ||
-              (cleanTarget.includes('checkout') && (sname.includes('checkout') || stype.includes('checkout'))) ||
-              (cleanTarget.includes('thank') && (sname.includes('thank') || stype.includes('thank'))) ||
-              (cleanTarget.includes('upsell') && (sname.includes('upsell') || stype.includes('upsell')))
+              sslug === cleanTarget
             );
           });
           if (idx !== -1) {
             setCurrentStepIndex(idx);
+          } else {
+            setCurrentStepIndex(0);
           }
+        } else {
+          setCurrentStepIndex(0);
         }
 
       } catch (e: any) {

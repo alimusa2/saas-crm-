@@ -3,8 +3,16 @@ import styles from './PipelinePage.module.css';
 import { Plus, ChevronRight, ChevronLeft, Trash2, Trophy, Frown, X } from 'lucide-react';
 import { pipelineApi } from '../../lib/api';
 import type { Deal, Stage } from '../../lib/api';
+import { useAuth } from '../../lib/AuthContext';
 
 export const PipelinePage = () => {
+  const { user } = useAuth();
+  const isAdmin = Boolean(
+    user?.is_superuser || 
+    user?.role === 'Admin' || 
+    user?.role === 'Owner' || 
+    (user?.role || '').toString().toLowerCase() === 'admin'
+  );
   const [stages, setStages] = useState<Stage[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,28 +24,25 @@ export const PipelinePage = () => {
   const [value, setValue] = useState(0);
   const [stageId, setStageId] = useState('');
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent && stages.length === 0) {
+      setLoading(true);
+    }
     try {
-      // 1. Fetch Pipelines
-      const pipelines = await pipelineApi.getPipelines();
-      if (pipelines.length === 0) {
-        throw new Error('No sales pipeline found. Try logging out and registering a new account to trigger database seeding.');
-      }
-      
-      const salesPipeline = pipelines[0];
-      
-      // 2. Fetch Stages
-      const fetchedStages = await pipelineApi.getStages(salesPipeline.id);
-      setStages(fetchedStages);
-      if (fetchedStages.length > 0) {
-        setStageId(fetchedStages[0].id);
-      }
-
-      // 4. Fetch Deals
-      const fetchedDeals = await pipelineApi.getDeals();
+      const [pipelines, fetchedDeals] = await Promise.all([
+        pipelineApi.getPipelines(),
+        pipelineApi.getDeals()
+      ]);
       setDeals(fetchedDeals);
 
+      if (pipelines.length > 0) {
+        const salesPipeline = pipelines[0];
+        const fetchedStages = await pipelineApi.getStages(salesPipeline.id);
+        setStages(fetchedStages);
+        if (fetchedStages.length > 0 && !stageId) {
+          setStageId(fetchedStages[0].id);
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -54,7 +59,7 @@ export const PipelinePage = () => {
           setDeals(fetchedDeals);
         })
         .catch(e => console.error("Pipeline deals polling failed:", e));
-    }, 4000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -77,7 +82,7 @@ export const PipelinePage = () => {
         status: 'Open'
       });
       setIsModalOpen(false);
-      fetchData();
+      fetchData(true);
     } catch (err: any) {
       alert(err.message || 'Failed to create deal');
     }
@@ -177,9 +182,11 @@ export const PipelinePage = () => {
                     }`}>
                       <div className={styles.cardHeader}>
                         <span className={styles.dealTitle}>{deal.title}</span>
-                        <button className={styles.deleteBtn} onClick={() => handleDeleteDeal(deal.id)} title="Delete">
-                          <Trash2 size={12} />
-                        </button>
+                        {isAdmin && (
+                          <button className={styles.deleteBtn} onClick={() => handleDeleteDeal(deal.id)} title="Delete">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
 
                       <div className={styles.cardValue}>

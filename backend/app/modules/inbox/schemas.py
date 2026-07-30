@@ -35,7 +35,7 @@ class MessageResponse(BaseModel):
     id: str
     body: str
     subject: Optional[str] = None
-    sender_id: str
+    sender_id: Optional[str] = None
     recipient_id: Optional[str] = None
     lead_id: Optional[str] = None
     contact_id: Optional[str] = None

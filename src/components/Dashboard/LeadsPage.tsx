@@ -2,8 +2,16 @@ import React, { useEffect, useState, useMemo } from 'react';
 import styles from './LeadsPage.module.css';
 import { Plus, Edit2, Trash2, X, Search, Filter, Upload, CheckCircle, AlertTriangle, Download, RefreshCw, Calendar, Award } from 'lucide-react';
 import { crmApi, settingsApi, type Lead } from '../../lib/api';
+import { useAuth } from '../../lib/AuthContext';
 
 export const LeadsPage = () => {
+  const { user } = useAuth();
+  const isAdmin = Boolean(
+    user?.is_superuser || 
+    user?.role === 'Admin' || 
+    user?.role === 'Owner' || 
+    (user?.role || '').toString().toLowerCase() === 'admin'
+  );
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +72,10 @@ export const LeadsPage = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [overrideScoreVal, setOverrideScoreVal] = useState<number>(50);
 
-  const fetchLeads = () => {
-    setLoading(true);
+  const fetchLeads = (isSilent = false) => {
+    if (!isSilent && leads.length === 0) {
+      setLoading(true);
+    }
     crmApi.getLeads()
       .then(setLeads)
       .catch(e => setError(e.message))
@@ -353,12 +363,16 @@ export const LeadsPage = () => {
           <p className={styles.subtitle}>Track, import, export, and score your prospective organization leads.</p>
         </div>
         <div className={styles.btnRow}>
-          <button className={styles.secondaryBtn} onClick={() => setIsImportOpen(true)}>
-            <Upload size={16} /> Import
-          </button>
-          <button className={styles.secondaryBtn} onClick={() => setIsExportOpen(true)}>
-            <Download size={16} /> Export
-          </button>
+          {isAdmin && (
+            <button className={styles.secondaryBtn} onClick={() => setIsImportOpen(true)}>
+              <Upload size={16} /> Import
+            </button>
+          )}
+          {isAdmin && (
+            <button className={styles.secondaryBtn} onClick={() => setIsExportOpen(true)}>
+              <Download size={16} /> Export
+            </button>
+          )}
           <button className={styles.addBtn} onClick={openAddModal}>
             <Plus size={18} /> Add Lead
           </button>
@@ -506,9 +520,11 @@ export const LeadsPage = () => {
                       <button className={styles.actionBtn} onClick={() => openEditModal(lead)} title="Edit">
                         <Edit2 size={16} />
                       </button>
-                      <button className={`${styles.actionBtn} ${styles.deleteBtn}`} onClick={() => handleDelete(lead.id)} title="Delete">
-                        <Trash2 size={16} />
-                      </button>
+                      {isAdmin && (
+                        <button className={`${styles.actionBtn} ${styles.deleteBtn}`} onClick={() => handleDelete(lead.id)} title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

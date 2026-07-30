@@ -18,18 +18,39 @@ def get_inbox_service(db: AsyncSession = Depends(get_db)) -> InboxService:
 
 @router.get("/", response_model=List[MessageResponse])
 async def list_messages(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    include_full_body: bool = Query(False),
     lead_id: Optional[str] = Query(None),
     contact_id: Optional[str] = Query(None),
+    thread_id: Optional[str] = Query(None),
     inbox_service: InboxService = Depends(get_inbox_service),
     current_user: dict = Depends(get_current_user),
 ):
-    """List messages for the organization, optionally filtered by lead or contact."""
+    """List messages for the organization with pagination, body truncation, and thread filtering."""
     return await inbox_service.get_messages(
         organization_id=current_user["org"],
         user_id=current_user["sub"],
+        skip=skip,
+        limit=limit,
+        include_full_body=include_full_body,
         lead_id=lead_id,
         contact_id=contact_id,
+        thread_id=thread_id,
     )
+
+
+@router.get("/{message_id}", response_model=MessageResponse)
+async def get_message(
+    message_id: str,
+    inbox_service: InboxService = Depends(get_inbox_service),
+    current_user: dict = Depends(get_current_user),
+):
+    """Retrieve full message detail by ID including full raw HTML body."""
+    msg = await inbox_service.get_message_by_id(message_id, current_user["org"])
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return msg
 
 
 @router.post("/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)

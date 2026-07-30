@@ -202,6 +202,8 @@ class FunnelService:
         for step in funnel.steps:
             step.components = migrate_legacy_step_components(step)
             ensure_page_content_layout(step)
+        if funnel.steps:
+            funnel.steps.sort(key=lambda s: s.order if s.order is not None else 999)
         return funnel
 
     @staticmethod
@@ -332,6 +334,9 @@ class FunnelService:
             for step in funnel.steps:
                 step.components = migrate_legacy_step_components(step)
                 ensure_page_content_layout(step)
+
+            if funnel.steps:
+                funnel.steps.sort(key=lambda s: s.order if s.order is not None else 999)
 
             # Log successful load details
             for step in funnel.steps:

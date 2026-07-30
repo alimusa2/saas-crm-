@@ -39,10 +39,20 @@ class StorageManager:
             try:
                 import cloudinary
                 import cloudinary.uploader
+
+                cloud_name = settings.CLOUDINARY_CLOUD_NAME
+                api_key = settings.CLOUDINARY_API_KEY
+                api_secret = settings.CLOUDINARY_API_SECRET
+
                 url_str = settings.CLOUDINARY_URL
                 if url_str and url_str.startswith("cloudinary://"):
-                    creds, cloud_name = url_str.replace("cloudinary://", "").split("@")
-                    api_key, api_secret = creds.split(":")
+                    creds, cname = url_str.replace("cloudinary://", "").split("@")
+                    k, s = creds.split(":")
+                    cloud_name = cloud_name or cname
+                    api_key = api_key or k
+                    api_secret = api_secret or s
+
+                if cloud_name and api_key and api_secret:
                     cloudinary.config(
                         cloud_name=cloud_name,
                         api_key=api_key,

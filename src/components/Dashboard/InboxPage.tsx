@@ -77,38 +77,56 @@ export const InboxPage = () => {
           setMessages(msgData);
         })
         .catch(e => console.error("Inbox polling failed:", e));
-    }, 4000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent && messages.length === 0) {
+      setLoading(true);
+    }
     try {
-      const [msgData, leadData, contactData, gmailData, teamData, apptData] = await Promise.all([
+      // 1. Fetch messages & gmail status first so inbox renders immediately
+      const [msgData, gmailData] = await Promise.all([
         inboxApi.getMessages(),
-        crmApi.getLeads(),
-        contactsApi.getContacts(),
-        gmailApi.getStatus(),
-        teamApi.getTeamMembers(),
-        calendarApi.getAppointments(),
+        gmailApi.getStatus().catch(() => null),
       ]);
       setMessages(msgData);
-      setLeads(leadData);
-      setContacts(contactData);
-      setGmailStatus(gmailData);
-      setTeamMembers(teamData.filter(t => !t.is_deleted));
-      setAppointments(apptData);
+      if (gmailData) setGmailStatus(gmailData);
+      setLoading(false);
+
+      // 2. Fetch secondary context data asynchronously in background
+      Promise.all([
+        crmApi.getLeads().catch(() => []),
+        contactsApi.getContacts().catch(() => []),
+        teamApi.getTeamMembers().catch(() => []),
+        calendarApi.getAppointments().catch(() => []),
+      ]).then(([leadData, contactData, teamData, apptData]) => {
+        setLeads(leadData);
+        setContacts(contactData);
+        setTeamMembers(teamData.filter(t => !t.is_deleted));
+        setAppointments(apptData);
+      });
     } catch (e) {
       console.error('Failed to load inbox data:', e);
-    } finally {
       setLoading(false);
     }
   };
 
-  // Scroll inner thread messages container so that the TOP of the LATEST message is at the top
+  // Scroll inner thread messages container and fetch full chat text when selected
   useEffect(() => {
     setShowReplyForm(false);
     if (selectedThreadKey) {
+      // Fetch full body details for selected conversation chat
+      inboxApi.getMessages(undefined, undefined, { include_full_body: true, limit: 100 })
+        .then(fullMsgs => {
+          setMessages(prev => {
+            const fullMap = new Map(fullMsgs.map(m => [m.id, m]));
+            return prev.map(m => fullMap.get(m.id) || m);
+          });
+        })
+        .catch(e => console.error("Failed to fetch full thread body:", e));
+
       const timer = setTimeout(() => {
         if (latestMessageRef.current) {
           latestMessageRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });

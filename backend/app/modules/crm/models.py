@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base_class import TenantAwareBase
+from app.modules.calendar.models import Appointment  # noqa: F401
 
 class Lead(TenantAwareBase):
     first_name = Column(String, nullable=False)

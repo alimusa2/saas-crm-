@@ -8,7 +8,7 @@ class FormFieldBase(BaseModel):
     field_type: str
     is_required: bool = False
     order: int = 0
-    options: Optional[Dict[str, Any]] = None
+    options: Optional[Any] = None
 
 class FormFieldCreate(FormFieldBase):
     pass

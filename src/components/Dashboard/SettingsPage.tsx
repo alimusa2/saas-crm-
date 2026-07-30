@@ -4,8 +4,17 @@ import { settingsApi } from '../../lib/api';
 import type { UserProfile, OrgSettings } from '../../lib/api';
 import { User, Building2, Lock, Save, Mail } from 'lucide-react';
 import { EmailIntegrationPage } from './EmailIntegrationPage';
+import { useAuth } from '../../lib/AuthContext';
 
 export const SettingsPage = () => {
+  const { user } = useAuth();
+  const isAdmin = Boolean(
+    user?.is_superuser || 
+    user?.role === 'Admin' || 
+    user?.role === 'Owner' || 
+    (user?.role || '').toString().toLowerCase() === 'admin'
+  );
+
   // Parse query params to see if we just came from Google OAuth redirect
   const query = new URLSearchParams(window.location.search);
   const isOauthCallback = query.get('oauth') === 'gmail';
@@ -14,7 +23,7 @@ export const SettingsPage = () => {
   const oauthEmail = query.get('email') || undefined;
 
   const [tab, setTab] = useState<'profile' | 'organization' | 'security' | 'email-integration'>(
-    isOauthCallback ? 'email-integration' : 'profile'
+    isOauthCallback && isAdmin ? 'email-integration' : 'profile'
   );
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [org, setOrg] = useState<OrgSettings | null>(null);
@@ -26,11 +35,18 @@ export const SettingsPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [p, o] = await Promise.all([settingsApi.getProfile(), settingsApi.getOrganization()]);
-        setProfile(p);
-        setOrg(o);
-        setProfileEdit({ first_name: p.first_name || '', last_name: p.last_name || '' });
-        setOrgEdit({ name: o.name, domain: o.domain || '' });
+        const [p, o] = await Promise.all([
+          settingsApi.getProfile().catch(() => null),
+          isAdmin ? settingsApi.getOrganization().catch(() => null) : Promise.resolve(null)
+        ]);
+        if (p) {
+          setProfile(p);
+          setProfileEdit({ first_name: p.first_name || '', last_name: p.last_name || '' });
+        }
+        if (o) {
+          setOrg(o);
+          setOrgEdit({ name: o.name, domain: o.domain || '' });
+        }
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     };
@@ -41,7 +57,7 @@ export const SettingsPage = () => {
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, [isOauthCallback]);
+  }, [isOauthCallback, isAdmin]);
 
   const showSaved = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
 
@@ -77,12 +93,16 @@ export const SettingsPage = () => {
           <button className={`${styles.tabBtn} ${tab === 'profile' ? styles.active : ''}`} onClick={() => setTab('profile')}>
             <User size={16} /> Profile
           </button>
-          <button className={`${styles.tabBtn} ${tab === 'organization' ? styles.active : ''}`} onClick={() => setTab('organization')}>
-            <Building2 size={16} /> Organization
-          </button>
-          <button className={`${styles.tabBtn} ${tab === 'email-integration' ? styles.active : ''}`} onClick={() => setTab('email-integration')}>
-            <Mail size={16} /> Email Integration
-          </button>
+          {isAdmin && (
+            <button className={`${styles.tabBtn} ${tab === 'organization' ? styles.active : ''}`} onClick={() => setTab('organization')}>
+              <Building2 size={16} /> Organization
+            </button>
+          )}
+          {isAdmin && (
+            <button className={`${styles.tabBtn} ${tab === 'email-integration' ? styles.active : ''}`} onClick={() => setTab('email-integration')}>
+              <Mail size={16} /> Email Integration
+            </button>
+          )}
           <button className={`${styles.tabBtn} ${tab === 'security' ? styles.active : ''}`} onClick={() => setTab('security')}>
             <Lock size={16} /> Security
           </button>
@@ -122,7 +142,7 @@ export const SettingsPage = () => {
             </form>
           )}
 
-          {tab === 'organization' && (
+          {tab === 'organization' && isAdmin && (
             <form onSubmit={handleSaveOrg} className={styles.form}>
               <h2 className={styles.sectionTitle}>Organization Details</h2>
               <div className={styles.formGroup}>
@@ -137,7 +157,7 @@ export const SettingsPage = () => {
             </form>
           )}
 
-          {tab === 'email-integration' && (
+          {tab === 'email-integration' && isAdmin && (
             <EmailIntegrationPage
               oauthStatus={oauthStatus}
               oauthMessage={oauthMessage}

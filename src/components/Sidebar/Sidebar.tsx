@@ -48,7 +48,7 @@ export const Sidebar = ({ isOpen, isCollapsed = false, onClose, activeItem, onSe
   const initials = [(firstName[0] ?? ''), (lastName[0] ?? '')].filter(Boolean).join('').toUpperCase() || '?';
 
   const isAdmin = Boolean(user?.is_superuser || user?.role === 'Admin' || user?.role === 'Owner');
-  const employeeAllowed = ['Dashboard', 'Inbox', 'Leads', 'Contacts', 'Pipeline', 'Tasks', 'Calendar', 'Settings'];
+  const employeeAllowed = ['Dashboard', 'Inbox', 'Leads', 'Contacts', 'Pipeline', 'Tasks', 'Calendar', 'Payments', 'Settings'];
 
   const navItems = isAdmin 
     ? NAV_ITEMS_BASE 
@@ -69,7 +69,7 @@ export const Sidebar = ({ isOpen, isCollapsed = false, onClose, activeItem, onSe
     };
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 5000);
+    const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 

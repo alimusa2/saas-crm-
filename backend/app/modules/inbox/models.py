@@ -5,7 +5,7 @@ class Message(TenantAwareBase):
     """Represents an internal message, email, or SMS in a CRM conversation thread."""
     subject = Column(String, nullable=True)
     body = Column(Text, nullable=False)
-    sender_id = Column(String, ForeignKey("user.id"), nullable=False)
+    sender_id = Column(String, ForeignKey("user.id"), nullable=True)
     recipient_id = Column(String, ForeignKey("user.id"), nullable=True)
     lead_id = Column(String, ForeignKey("lead.id"), nullable=True)
     contact_id = Column(String, ForeignKey("contact.id"), nullable=True)

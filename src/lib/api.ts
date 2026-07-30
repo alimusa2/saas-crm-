@@ -28,6 +28,12 @@ export async function api<T = unknown>(
   const resp = await fetch(`${API_BASE}${path}`, { ...init, headers });
 
   if (!resp.ok) {
+    if (resp.status === 401) {
+      clearToken();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+    }
     let msg = `HTTP ${resp.status}`;
     let detail: any = null;
     try {
@@ -647,13 +653,22 @@ export type EmailSendRequest = {
 };
 
 export const inboxApi = {
-  getMessages: (lead_id?: string, contact_id?: string) => {
+  getMessages: (
+    lead_id?: string,
+    contact_id?: string,
+    options?: { skip?: number; limit?: number; include_full_body?: boolean; thread_id?: string }
+  ) => {
     const params = new URLSearchParams();
     if (lead_id) params.set('lead_id', lead_id);
     if (contact_id) params.set('contact_id', contact_id);
+    if (options?.skip !== undefined) params.set('skip', options.skip.toString());
+    if (options?.limit !== undefined) params.set('limit', options.limit.toString());
+    if (options?.include_full_body !== undefined) params.set('include_full_body', options.include_full_body.toString());
+    if (options?.thread_id) params.set('thread_id', options.thread_id);
     const qs = params.toString();
     return api<Message[]>(`/inbox/${qs ? '?' + qs : ''}`);
   },
+  getMessage: (id: string) => api<Message>(`/inbox/${id}`),
   sendMessage: (data: Partial<Message>) =>
     api<Message>('/inbox/', { method: 'POST', body: JSON.stringify(data) }),
   sendEmail: (data: EmailSendRequest) =>

@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python virtual environment
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+
+# Environment variables (sensitive)
+backend/.env
+.env
+.env.local
+.env.production
+
+# Uploaded static files
+backend/static/uploads/
+
+# Scratch / debug scripts
+backend/check_supabase.py
+backend/migrate_to_supabase.py
+backend/test_db_conn.py
+backend/test_notif_debug.py
