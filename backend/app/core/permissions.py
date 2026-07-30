@@ -7,13 +7,13 @@ from sqlalchemy.future import select
 from app.modules.team.models import TeamMember
 
 def is_admin_user(current_user: dict) -> bool:
-    """Returns True if user is superuser or has Admin role."""
+    """Returns True if user is superuser or has Admin/Owner role (case-insensitive)."""
     if not current_user:
         return False
     if current_user.get("is_superuser") is True:
         return True
     role = (current_user.get("role") or "").lower()
-    return role == "admin"
+    return role in ("admin", "owner")
 
 async def get_user_team_member_id(db: AsyncSession, user_id: str, organization_id: str) -> Optional[str]:
     """Resolves TeamMember ID corresponding to a given User ID."""

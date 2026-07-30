@@ -74,10 +74,13 @@ async def delete_invoice(
 async def trigger_auto_reminders(
     days_before: int = Query(1, ge=0, le=30),
     payment_service: PaymentService = Depends(get_payment_service),
-    current_user: dict = Depends(get_current_user),
-    admin_user: User = Depends(require_org_admin)
+    current_user: dict = Depends(get_current_user)
 ):
-    """Automatically check unpaid invoices and dispatch due date reminders based on configured lead-time (e.g. 1 day before due date)."""
+    """Automatically check unpaid invoices and dispatch due date reminders. Admin-only action."""
+    from app.core.permissions import is_admin_user
+    if not is_admin_user(current_user):
+        # Silently skip for non-admin users instead of throwing 403
+        return {"reminded_count": 0, "skipped": True}
     return await payment_service.process_auto_reminders(current_user["org"], days_before=days_before)
 
 @router.get("/payments", response_model=List[PaymentResponse])

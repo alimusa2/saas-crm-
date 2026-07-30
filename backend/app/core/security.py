@@ -65,7 +65,8 @@ async def get_current_user(
     from app.modules.team.models import TeamMember
     from sqlalchemy import select
     
-    if user_id and user_id != "system" and not org_id:
+    # Always resolve role and superuser status from database for accurate RBAC
+    if user_id and user_id != "system":
         try:
             async with AsyncSessionLocal() as db:
                 res = await db.execute(select(User).where(User.id == user_id))
@@ -74,13 +75,19 @@ async def get_current_user(
                     if user.organization_id:
                         org_id = user.organization_id
                     is_superuser = user.is_superuser
-                    
-                    res_tm = await db.execute(select(TeamMember).where(TeamMember.user_id == user_id, TeamMember.is_deleted == False))
-                    tm = res_tm.scalars().first()
-                    if tm:
-                        role = tm.role
-                    elif is_superuser:
+
+                    if is_superuser:
                         role = "Admin"
+                    else:
+                        res_tm = await db.execute(
+                            select(TeamMember).where(
+                                TeamMember.user_id == user_id,
+                                TeamMember.is_deleted == False
+                            )
+                        )
+                        tm = res_tm.scalars().first()
+                        if tm:
+                            role = tm.role
         except Exception:
             pass
 
