@@ -82,7 +82,7 @@ export const InboxPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchData = async (isSilent = false) => {
+  const fetchData = useCallback(async (isSilent = false) => {
     if (!isSilent && messages.length === 0) {
       setLoading(true);
     }
@@ -112,13 +112,13 @@ export const InboxPage = () => {
       console.error('Failed to load inbox data:', e);
       setLoading(false);
     }
-  }, []);
+  }, [messages.length]);
 
   useWebSocket(useCallback((evt) => {
     if (evt.event === 'inbox.new_message') {
-      loadData();
+      fetchData(true);
     }
-  }, [loadData]));
+  }, [fetchData]));
 
   // Scroll inner thread messages container and fetch full chat text when selected
   useEffect(() => {
