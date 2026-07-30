@@ -18,6 +18,16 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_always_eager=settings.CELERY_ALWAYS_EAGER,
     task_eager_propagates=settings.CELERY_ALWAYS_EAGER,
+    beat_schedule={
+        "check-invoice-auto-reminders-hourly": {
+            "task": "app.modules.payments.tasks.process_scheduled_invoice_reminders",
+            "schedule": 3600.0,  # Every 1 hour
+        },
+        "check-workflow-sla-breaches": {
+            "task": "app.modules.workflow.tasks.check_sla_breaches",
+            "schedule": 900.0,  # Every 15 minutes
+        }
+    }
 )
 
 # Autodiscover tasks from loaded modules

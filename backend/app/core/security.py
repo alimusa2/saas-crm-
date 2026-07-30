@@ -59,37 +59,47 @@ async def get_current_user(
     is_superuser = payload.get("is_superuser", False)
     role = payload.get("role", "Member")
     
-    # Dynamically resolve organization_id and role from database
+    # Dynamically resolve organization_id and role from Redis cache or database
+    from app.core.redis_cache import cache_get, cache_set
     from app.db.session import AsyncSessionLocal
     from app.modules.auth.models import User
     from app.modules.team.models import TeamMember
     from sqlalchemy import select
-    
-    # Always resolve role and superuser status from database for accurate RBAC
-    if user_id and user_id != "system":
-        try:
-            async with AsyncSessionLocal() as db:
-                res = await db.execute(select(User).where(User.id == user_id))
-                user = res.scalars().first()
-                if user:
-                    if user.organization_id:
-                        org_id = user.organization_id
-                    is_superuser = user.is_superuser
 
-                    if is_superuser:
-                        role = "Admin"
-                    else:
-                        res_tm = await db.execute(
-                            select(TeamMember).where(
-                                TeamMember.user_id == user_id,
-                                TeamMember.is_deleted == False
+    if user_id and user_id != "system":
+        cache_key = f"auth_user_role:{user_id}"
+        cached_auth = await cache_get(cache_key)
+        if cached_auth:
+            org_id = cached_auth.get("org_id") or org_id
+            is_superuser = cached_auth.get("is_superuser", False)
+            role = cached_auth.get("role", "Member")
+        else:
+            try:
+                async with AsyncSessionLocal() as db:
+                    res = await db.execute(select(User).where(User.id == user_id))
+                    user = res.scalars().first()
+                    if user:
+                        if user.organization_id:
+                            org_id = user.organization_id
+                        is_superuser = user.is_superuser
+
+                        if is_superuser:
+                            role = "Admin"
+                        else:
+                            res_tm = await db.execute(
+                                select(TeamMember).where(
+                                    TeamMember.user_id == user_id,
+                                    TeamMember.is_deleted == False
+                                )
                             )
-                        )
-                        tm = res_tm.scalars().first()
-                        if tm:
-                            role = tm.role
-        except Exception:
-            pass
+                            tm = res_tm.scalars().first()
+                            if tm:
+                                role = tm.role
+
+                        # Cache resolved auth info for 15 minutes (900 seconds)
+                        await cache_set(cache_key, {"org_id": org_id, "is_superuser": is_superuser, "role": role}, expire_seconds=900)
+            except Exception:
+                pass
 
     if not org_id:
         org_id = "default_org"

@@ -55,7 +55,14 @@ async def list_leads(
     """
     Retrieve all leads for the current organization.
     """
-    return await crm_service.get_leads(
+    from app.core.redis_cache import cache_get, cache_set
+    user_id = current_user.get("user_id") or current_user.get("sub") or "user"
+    cache_key = f"leads_list:{current_user['org']}:{user_id}:{skip}:{limit}:{search}:{status}:{pipeline_stage}"
+    cached_leads = await cache_get(cache_key)
+    if cached_leads is not None:
+        return cached_leads
+
+    leads = await crm_service.get_leads(
         current_user["org"],
         skip=skip,
         limit=limit,
@@ -71,6 +78,13 @@ async def list_leads(
         company_name=company_name,
         current_user=current_user
     )
+    # Convert Pydantic / ORM models to dict for JSON caching
+    try:
+        leads_dict = [l.model_dump() if hasattr(l, 'model_dump') else dict(l) for l in leads]
+        await cache_set(cache_key, leads_dict, expire_seconds=60)
+    except Exception:
+        pass
+    return leads
 
 @router.post("/leads", response_model=LeadResponse, status_code=status.HTTP_201_CREATED)
 async def create_lead(
@@ -82,6 +96,8 @@ async def create_lead(
     """
     Create a new lead.
     """
+    from app.core.redis_cache import cache_delete_pattern
+    await cache_delete_pattern("leads_list:*")
     return await crm_service.create_lead(lead_in, current_user["org"], current_user["sub"], ignore_duplicates=ignore_duplicates)
 
 @router.get("/leads/{lead_id}", response_model=LeadResponse)

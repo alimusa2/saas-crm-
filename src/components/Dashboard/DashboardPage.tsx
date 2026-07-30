@@ -102,12 +102,12 @@ export const DashboardPage = () => {
     }
   }, []);
 
-  // Initial fetch + 30 second real-time polling interval
+  // Initial fetch + 60 second real-time polling interval (optimized for egress)
   useEffect(() => {
     loadDashboardData();
     const interval = setInterval(() => {
       loadDashboardData();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [loadDashboardData]);
 
