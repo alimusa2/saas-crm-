@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styles from './Sidebar.module.css';
 import { 
   LayoutDashboard, Inbox, Users, UserCircle, Filter, 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { inboxApi } from '../../lib/api';
+import { useWebSocket } from '../../lib/useWebSocket';
 
 const NAV_ITEMS_BASE = [
   { icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
@@ -54,24 +55,28 @@ export const Sidebar = ({ isOpen, isCollapsed = false, onClose, activeItem, onSe
     ? NAV_ITEMS_BASE 
     : NAV_ITEMS_BASE.filter(item => employeeAllowed.includes(item.label));
 
-  // Real-time unread messages polling
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const messages = await inboxApi.getMessages();
-        if (Array.isArray(messages)) {
-          const unread = messages.filter(m => (m as any).read_status === 'unread' || m.is_read === false).length;
-          setUnreadInboxCount(unread);
-        }
-      } catch (err) {
-        // Fallback silently if unauthenticated or error
+  // Real-time unread messages & notifications via WebSockets
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const messages = await inboxApi.getMessages();
+      if (Array.isArray(messages)) {
+        const unread = messages.filter(m => (m as any).read_status === 'unread' || m.is_read === false).length;
+        setUnreadInboxCount(unread);
       }
-    };
-
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+    } catch (err) {
+      // Fallback silently if unauthenticated or error
+    }
   }, []);
+
+  useWebSocket(useCallback((evt) => {
+    if (evt.event === 'inbox.new_message' || evt.event === 'notification.new') {
+      fetchUnreadCount();
+    }
+  }, [fetchUnreadCount]));
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''} ${isCollapsed ? styles.collapsed : ''}`}>

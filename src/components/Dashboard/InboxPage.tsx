@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import styles from './InboxPage.module.css';
 import { inboxApi, crmApi, contactsApi, gmailApi, teamApi, calendarApi } from '../../lib/api';
 import type { Message, Lead, Contact, GmailIntegration, TeamMember, Appointment } from '../../lib/api';
+import { useWebSocket } from '../../lib/useWebSocket';
 import {
   Send,
   Mail,
@@ -111,7 +112,13 @@ export const InboxPage = () => {
       console.error('Failed to load inbox data:', e);
       setLoading(false);
     }
-  };
+  }, []);
+
+  useWebSocket(useCallback((evt) => {
+    if (evt.event === 'inbox.new_message') {
+      loadData();
+    }
+  }, [loadData]));
 
   // Scroll inner thread messages container and fetch full chat text when selected
   useEffect(() => {

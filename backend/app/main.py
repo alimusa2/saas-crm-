@@ -480,4 +480,6 @@ from app.modules.team.performance_router import router as performance_router
 app.include_router(performance_router, prefix="/api/v1/team/performance", tags=["team-performance"])
 app.include_router(team_router, prefix="/api/v1/team", tags=["team"])
 app.include_router(campaigns_router, prefix="/api/v1/campaigns", tags=["campaigns"])
+from app.modules.websocket.router import router as ws_router
+app.include_router(ws_router, tags=["websocket"])
 

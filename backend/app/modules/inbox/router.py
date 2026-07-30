@@ -60,7 +60,13 @@ async def send_message(
     current_user: dict = Depends(get_current_user),
 ):
     """Send a new internal message or log an SMS."""
-    return await inbox_service.send_message(msg_in, current_user["org"], current_user["sub"])
+    msg = await inbox_service.send_message(msg_in, current_user["org"], current_user["sub"])
+    try:
+        from app.core.websocket_manager import broadcast_event
+        await broadcast_event(current_user["org"], "inbox.new_message", {"id": msg.id, "subject": msg.subject})
+    except Exception:
+        pass
+    return msg
 
 
 @router.post("/send-email", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
@@ -80,12 +86,18 @@ async def send_email(
     sender_user = result.scalars().first()
     sender_crm_email = sender_user.email if sender_user else "unknown@crm.local"
 
-    return await inbox_service.send_email_via_gmail(
+    msg = await inbox_service.send_email_via_gmail(
         req=req,
         organization_id=current_user["org"],
         sender_id=current_user["sub"],
         sender_crm_email=sender_crm_email,
     )
+    try:
+        from app.core.websocket_manager import broadcast_event
+        await broadcast_event(current_user["org"], "inbox.new_message", {"id": msg.id, "subject": msg.subject})
+    except Exception:
+        pass
+    return msg
 
 
 @router.patch("/{message_id}/read", response_model=MessageResponse)
