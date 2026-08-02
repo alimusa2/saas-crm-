@@ -7,23 +7,33 @@ import type { Deal } from '../../lib/api';
 
 const COLORS = ['#8B5CF6', '#3B82F6', '#0EA5E9', '#10B981', '#F59E0B', '#F97316'];
 
-export const PipelineFunnel = () => {
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(true);
+interface PipelineFunnelProps {
+  deals?: Deal[];
+}
+
+export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({ deals: propDeals }) => {
+  const [deals, setDeals] = useState<Deal[]>(propDeals || []);
+  const [loading, setLoading] = useState(!propDeals);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDeals = () => {
-      pipelineApi.getDeals()
-        .then(setDeals)
-        .catch(e => setError(e.message))
-        .finally(() => setLoading(false));
-    };
+    if (propDeals) {
+      setDeals(propDeals);
+      setLoading(false);
+    } else {
+      const fetchDeals = () => {
+        pipelineApi.getDeals()
+          .then(setDeals)
+          .catch(e => setError(e.message))
+          .finally(() => setLoading(false));
+      };
 
-    fetchDeals();
-    const interval = setInterval(fetchDeals, 4000);
-    return () => clearInterval(interval);
-  }, []);
+      fetchDeals();
+      const interval = setInterval(fetchDeals, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [propDeals]);
+
 
   // Group deals by status to build funnel segments
   const statusGroups: Record<string, number> = {};

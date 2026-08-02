@@ -60,13 +60,12 @@ async def get_reports_overview(
 
     inv_stmt = select(Invoice).where(Invoice.organization_id == org_id)
 
-    # 2. Execute all 4 queries concurrently in parallel
-    leads_res, deals_res, tasks_res, inv_res = await asyncio.gather(
-        db.execute(leads_stmt),
-        db.execute(deals_stmt),
-        db.execute(tasks_stmt),
-        db.execute(inv_stmt)
-    )
+    # 2. Execute queries sequentially on the AsyncSession
+    leads_res = await db.execute(leads_stmt)
+    deals_res = await db.execute(deals_stmt)
+    tasks_res = await db.execute(tasks_stmt)
+    inv_res = await db.execute(inv_stmt)
+
 
     # 3. Process results
     leads_list = list(leads_res.scalars().all())

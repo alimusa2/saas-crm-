@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+
 from app.modules.auth.router import router as auth_router
 from app.modules.crm.router import router as crm_router
 from app.modules.pipeline.router import router as pipeline_router
@@ -446,6 +448,10 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# GZip compression for payloads > 1000 bytes over remote connections (Supabase & Hostinger)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 @app.get("/")
 async def root():

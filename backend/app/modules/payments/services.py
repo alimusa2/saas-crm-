@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional, Sequence
 from datetime import datetime, timezone
+from app.core.config import settings
 from app.modules.payments.models import Invoice, Payment
 from app.modules.payments.schemas import InvoiceCreate, InvoiceUpdate, PaymentCreate
 
@@ -102,7 +103,7 @@ class PaymentService:
                         "due_date": due_str,
                         "total_amount": invoice.amount,
                         "currency": invoice.currency,
-                        "download_link": f"http://localhost:5173/payments/invoice/{invoice.id}",
+                        "download_link": f"{settings.FRONTEND_URL}/payments/invoice/{invoice.id}",
                         "payment_instructions": "Process through Credit Card / Bank Transfer on the billing page."
                     }
                 )

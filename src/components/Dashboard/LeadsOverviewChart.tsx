@@ -4,43 +4,52 @@ import { ChevronDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { crmApi, type Lead } from '../../lib/api';
 
-export const LeadsOverviewChart = () => {
+interface LeadsOverviewChartProps {
+  leads?: Lead[];
+}
+
+export const LeadsOverviewChart: React.FC<LeadsOverviewChartProps> = ({ leads: propLeads }) => {
   const [chartData, setChartData] = useState<{ name: string; leads: number }[]>([]);
 
   useEffect(() => {
-    crmApi.getLeads(0, 500)
-      .then((leads: Lead[]) => {
-        const daysMap: Record<string, number> = {};
-        const dates: { dateStr: string; label: string }[] = [];
-        
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          const dateStr = d.toISOString().split('T')[0];
-          const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          dates.push({ dateStr, label });
-          daysMap[dateStr] = 0;
-        }
+    const processLeads = (leads: Lead[]) => {
+      const daysMap: Record<string, number> = {};
+      const dates: { dateStr: string; label: string }[] = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dates.push({ dateStr, label });
+        daysMap[dateStr] = 0;
+      }
 
-        (leads || []).forEach(lead => {
-          if (lead.created_at) {
-            const dStr = lead.created_at.split('T')[0];
-            if (daysMap[dStr] !== undefined) {
-              daysMap[dStr] += 1;
-            }
+      (leads || []).forEach(lead => {
+        if (lead.created_at) {
+          const dStr = lead.created_at.split('T')[0];
+          if (daysMap[dStr] !== undefined) {
+            daysMap[dStr] += 1;
           }
-        });
-
-        const formatted = dates.map(item => ({
-          name: item.label,
-          leads: daysMap[item.dateStr] || 0
-        }));
-        setChartData(formatted);
-      })
-      .catch(() => {
-        setChartData([]);
+        }
       });
-  }, []);
+
+      const formatted = dates.map(item => ({
+        name: item.label,
+        leads: daysMap[item.dateStr] || 0
+      }));
+      setChartData(formatted);
+    };
+
+    if (propLeads) {
+      processLeads(propLeads);
+    } else {
+      crmApi.getLeads(0, 500)
+        .then(processLeads)
+        .catch(() => setChartData([]));
+    }
+  }, [propLeads]);
+
 
   return (
     <div className={styles.card}>

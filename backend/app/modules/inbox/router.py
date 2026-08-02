@@ -37,7 +37,9 @@ async def list_messages(
         lead_id=lead_id,
         contact_id=contact_id,
         thread_id=thread_id,
+        current_user=current_user,
     )
+
 
 
 @router.get("/{message_id}", response_model=MessageResponse)

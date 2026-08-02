@@ -11,13 +11,14 @@ if "sqlite" not in settings.SQLALCHEMY_DATABASE_URI:
         "pool_size": 20,
         "max_overflow": 30,
         "pool_timeout": 30,
-        "pool_recycle": 1800,
+        "pool_recycle": 300,
         "pool_pre_ping": True,
         "connect_args": {
             "statement_cache_size": 0,
             "prepared_statement_cache_size": 0,
         },
     })
+
 
 engine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URI,

@@ -54,6 +54,13 @@ async def get_me(
     from app.modules.auth.dependencies import get_employee_context
     emp_ctx = await get_employee_context(user, db)
     
+    org_name = None
+    if user.organization_id:
+        from app.modules.organization.models import Organization
+        from sqlalchemy import select
+        res_org = await db.execute(select(Organization.name).where(Organization.id == user.organization_id))
+        org_name = res_org.scalar_one_or_none()
+    
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -62,6 +69,7 @@ async def get_me(
         is_active=user.is_active,
         is_superuser=user.is_superuser,
         organization_id=user.organization_id,
+        organization_name=org_name,
         role=emp_ctx.get("role", "Admin" if user.is_superuser else "Employee"),
         team_member_id=emp_ctx.get("team_member_id")
     )

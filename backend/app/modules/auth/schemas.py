@@ -15,6 +15,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     organization_id: str
+    organization_name: Optional[str] = None
     role: Optional[str] = "Admin"
     team_member_id: Optional[str] = None
     

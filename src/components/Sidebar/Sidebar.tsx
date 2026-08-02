@@ -45,6 +45,7 @@ export const Sidebar = ({ isOpen, isCollapsed = false, onClose, activeItem, onSe
   const firstName = (user?.first_name as string) ?? '';
   const lastName = (user?.last_name as string) ?? '';
   const email = (user?.email as string) ?? '';
+  const orgName = (user?.organization_name as string) || 'Organization';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || email || 'User';
   const initials = [(firstName[0] ?? ''), (lastName[0] ?? '')].filter(Boolean).join('').toUpperCase() || '?';
 
@@ -101,7 +102,7 @@ export const Sidebar = ({ isOpen, isCollapsed = false, onClose, activeItem, onSe
           </div>
           {!isCollapsed && (
             <div>
-              <div className={styles.workspaceName}>Acme Digital</div>
+              <div className={styles.workspaceName}>{orgName}</div>
               <div className={styles.workspaceRole}>{isAdmin ? 'Workspace Admin' : 'Employee Portal'}</div>
             </div>
           )}

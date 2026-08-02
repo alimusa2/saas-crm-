@@ -12,10 +12,34 @@ export function clearToken(): void {
   localStorage.removeItem('access_token');
 }
 
+// Transparent in-memory response cache for GET requests to make component navigation instant
+const apiCache = new Map<string, { timestamp: number; data: any }>();
+const CACHE_TTL_MS = 10000; // 10 seconds cache window
+
+export function clearApiCache(): void {
+  apiCache.clear();
+}
+
 export async function api<T = unknown>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
+  const method = (init.method || 'GET').toUpperCase();
+
+  // Automatically invalidate cache on state mutations (POST, PUT, PATCH, DELETE)
+  if (method !== 'GET') {
+    clearApiCache();
+  }
+
+  // Serve from in-memory cache for GET requests unless explicitly bypassed with cache: 'no-store'
+  const isCacheable = method === 'GET' && init.cache !== 'no-store';
+  if (isCacheable) {
+    const cached = apiCache.get(path);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data as T;
+    }
+  }
+
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -48,8 +72,14 @@ export async function api<T = unknown>(
   }
   // 204 No Content
   if (resp.status === 204) return undefined as T;
-  return resp.json() as Promise<T>;
+
+  const data = await resp.json();
+  if (isCacheable) {
+    apiCache.set(path, { timestamp: Date.now(), data });
+  }
+  return data as T;
 }
+
 
 // ─── Typed helpers ───────────────────────────────────────────────────────────
 

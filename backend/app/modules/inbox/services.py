@@ -1,6 +1,9 @@
+import re
+import copy
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
+
 from app.modules.inbox.models import Message
 from app.modules.inbox.schemas import MessageCreate, EmailSendRequest
 
@@ -124,15 +127,22 @@ class InboxService:
         lead_id: Optional[str] = None,
         contact_id: Optional[str] = None,
         thread_id: Optional[str] = None,
+        current_user: Optional[dict] = None,
     ) -> List[Message]:
         """Return messages for an org with pagination, optional thread filtering, and body truncation."""
+        from app.core.permissions import is_admin_user
         from app.modules.auth.models import User
         import copy
         
-        res_usr = await self.db.execute(select(User).where(User.id == user_id))
-        user = res_usr.scalars().first()
-        is_admin = user.is_superuser if user else False
-        user_email = user.email if user else ""
+        if current_user:
+            is_admin = is_admin_user(current_user)
+            user_email = current_user.get("email") or ""
+        else:
+            res_usr = await self.db.execute(select(User).where(User.id == user_id))
+            user = res_usr.scalars().first()
+            is_admin = (user.is_superuser or (user.role and user.role.lower() in ("admin", "owner"))) if user else False
+            user_email = user.email if user else ""
+
 
         stmt = select(Message).where(Message.organization_id == organization_id)
         if lead_id:
@@ -167,15 +177,25 @@ class InboxService:
         if not include_full_body:
             truncated = []
             for m in filtered:
-                if m.body and len(m.body) > 300:
-                    m_copy = copy.copy(m)
-                    m_copy.body = m.body[:300] + "..."
-                    truncated.append(m_copy)
-                else:
-                    truncated.append(m)
+                m_copy = copy.copy(m)
+                if m.body:
+                    if '<' in m.body:
+                        # Clean HTML tags and doctypes for preview string
+                        clean = re.sub(r'<!DOCTYPE[^>]*>', '', m.body, flags=re.IGNORECASE)
+                        clean = re.sub(r'<head[\s\S]*?</head>', '', clean, flags=re.IGNORECASE)
+                        clean = re.sub(r'<style[\s\S]*?</style>', '', clean, flags=re.IGNORECASE)
+                        clean = re.sub(r'<script[\s\S]*?</script>', '', clean, flags=re.IGNORECASE)
+                        clean = re.sub(r'<xml[\s\S]*?</xml>', '', clean, flags=re.IGNORECASE)
+                        clean = re.sub(r'<[^>]+>', ' ', clean)
+                        clean_text = ' '.join(clean.split())
+                        m_copy.body = clean_text[:300] + "..." if len(clean_text) > 300 else clean_text
+                    elif len(m.body) > 300:
+                        m_copy.body = m.body[:300] + "..."
+                truncated.append(m_copy)
             return truncated
 
         return filtered
+
 
     async def get_message_by_id(self, message_id: str, organization_id: str) -> Optional[Message]:
         stmt = select(Message).where(Message.id == message_id, Message.organization_id == organization_id)

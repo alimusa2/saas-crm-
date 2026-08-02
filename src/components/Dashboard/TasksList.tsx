@@ -13,17 +13,27 @@ function formatDue(iso?: string): { label: string; type: string } {
   return { label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), type: 'other' };
 }
 
-export const TasksList = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+interface TasksListProps {
+  initialTasks?: Task[];
+}
+
+export const TasksList: React.FC<TasksListProps> = ({ initialTasks }) => {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks || []);
+  const [loading, setLoading] = useState(!initialTasks);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    tasksApi.getTasks()
-      .then(setTasks)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    if (initialTasks) {
+      setTasks(initialTasks);
+      setLoading(false);
+    } else {
+      tasksApi.getTasks()
+        .then(setTasks)
+        .catch(e => setError(e.message))
+        .finally(() => setLoading(false));
+    }
+  }, [initialTasks]);
+
 
   const toggleTask = async (task: Task) => {
     try {

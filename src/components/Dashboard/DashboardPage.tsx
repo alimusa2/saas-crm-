@@ -29,6 +29,10 @@ export const DashboardPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+
   // Real-time metric states
   const [stats, setStats] = useState({
     totalLeads: 0,
@@ -59,13 +63,18 @@ export const DashboardPage = () => {
       const apptsArr = Array.isArray(apptsData) ? apptsData : [];
       const invsArr = Array.isArray(invoicesData) ? invoicesData : [];
 
+      setLeads(leadsArr);
+      setTasks(tasksArr);
+      setDeals(dealsArr);
+
+
       // 1. Total Leads & Conversion
       const totalLeads = leadsArr.length;
       const qualified = leadsArr.filter(l => l.status === 'Qualified' || l.status === 'Contacted' || l.status === 'Won').length;
       const conversionRateVal = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) + '%' : '0.0%';
 
       // 2. Revenue calculation (Paid Invoices first, fallback to Deals Pipeline Value)
-      const paidInvoicesTotal = invsArr.filter(i => i.status === 'Paid').reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+      const paidInvoicesTotal = invsArr.filter(i => i.status === 'Paid').reduce((sum, i) => sum + (Number(i.amount) || Number((i as any).total) || 0), 0);
       const pipelineDealsTotal = dealsArr.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
       const totalRevNumber = paidInvoicesTotal > 0 ? paidInvoicesTotal : pipelineDealsTotal;
       const formattedRev = `$${totalRevNumber.toLocaleString('en-US')}`;
@@ -218,15 +227,16 @@ export const DashboardPage = () => {
       </div>
 
       <div className={styles.gridRow}>
-        <LeadsOverviewChart />
-        <PipelineFunnel />
-        <TasksList />
+        <LeadsOverviewChart leads={leads} />
+        <PipelineFunnel deals={deals} />
+        <TasksList initialTasks={tasks} />
       </div>
 
       <div className={styles.gridRow}>
-        <RecentLeadsList />
+        <RecentLeadsList initialLeads={leads} />
         <FunnelsList />
         <div className={styles.colFlex}>
+
           <QuickActions />
           {isAdmin && <IntegrationsWidget />}
         </div>

@@ -11,17 +11,27 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export const RecentLeadsList = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RecentLeadsListProps {
+  initialLeads?: Lead[];
+}
+
+export const RecentLeadsList: React.FC<RecentLeadsListProps> = ({ initialLeads }) => {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads ? initialLeads.slice(0, 5) : []);
+  const [loading, setLoading] = useState(!initialLeads);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    crmApi.getLeads(0, 5)
-      .then(setLeads)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    if (initialLeads) {
+      setLeads(initialLeads.slice(0, 5));
+      setLoading(false);
+    } else {
+      crmApi.getLeads(0, 5)
+        .then(setLeads)
+        .catch(e => setError(e.message))
+        .finally(() => setLoading(false));
+    }
+  }, [initialLeads]);
+
 
   return (
     <div className={styles.card}>

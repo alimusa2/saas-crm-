@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     
     # CORS
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:5174"
     
     # JWT (placeholder for future Supabase integration)
     JWT_SECRET: str = "growthOS-dev-secret-key-change-in-production"

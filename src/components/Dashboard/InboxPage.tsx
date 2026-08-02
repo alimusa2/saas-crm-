@@ -69,13 +69,29 @@ export const InboxPage = () => {
   const threadMessagesRef = useRef<HTMLDivElement>(null);
   const latestMessageRef = useRef<HTMLDivElement>(null);
 
+  // Helper to merge newly fetched messages into state without overwriting already-loaded full message bodies
+  const mergeMessagesState = useCallback((incomingMsgs: Message[]) => {
+    setMessages(prev => {
+      if (prev.length === 0) return incomingMsgs;
+      const prevMap = new Map(prev.map(m => [m.id, m]));
+      return incomingMsgs.map(newMsg => {
+        const existing = prevMap.get(newMsg.id);
+        if (existing && existing.body && existing.body.length > (newMsg.body?.length || 0)) {
+          // Keep existing full body if incoming is a truncated light preview
+          return { ...newMsg, body: existing.body };
+        }
+        return newMsg;
+      });
+    });
+  }, []);
+
   // Load everything on mount and poll for real-time updates
   useEffect(() => {
     fetchData();
     const interval = setInterval(() => {
       inboxApi.getMessages()
         .then(msgData => {
-          setMessages(msgData);
+          mergeMessagesState(msgData);
         })
         .catch(e => console.error("Inbox polling failed:", e));
     }, 15000);
@@ -92,7 +108,7 @@ export const InboxPage = () => {
         inboxApi.getMessages(),
         gmailApi.getStatus().catch(() => null),
       ]);
-      setMessages(msgData);
+      mergeMessagesState(msgData);
       if (gmailData) setGmailStatus(gmailData);
       setLoading(false);
 
@@ -112,7 +128,7 @@ export const InboxPage = () => {
       console.error('Failed to load inbox data:', e);
       setLoading(false);
     }
-  }, [messages.length]);
+  }, [messages.length, mergeMessagesState]);
 
   useWebSocket(useCallback((evt) => {
     if (evt.event === 'inbox.new_message') {
@@ -129,7 +145,16 @@ export const InboxPage = () => {
         .then(fullMsgs => {
           setMessages(prev => {
             const fullMap = new Map(fullMsgs.map(m => [m.id, m]));
-            return prev.map(m => fullMap.get(m.id) || m);
+            const updated = prev.map(m => {
+              const full = fullMap.get(m.id);
+              if (full) return full;
+              return m;
+            });
+            const prevIds = new Set(prev.map(m => m.id));
+            fullMsgs.forEach(fm => {
+              if (!prevIds.has(fm.id)) updated.push(fm);
+            });
+            return updated;
           });
         })
         .catch(e => console.error("Failed to fetch full thread body:", e));
@@ -146,15 +171,31 @@ export const InboxPage = () => {
   }, [selectedThreadKey]);
 
 
+
   // Maps for quick lookup
   const leadMap = useMemo(() => new Map(leads.map(l => [l.id, l])), [leads]);
   const contactMap = useMemo(() => new Map(contacts.map(c => [c.id, c])), [contacts]);
 
-  // Helper to strip HTML tags and extra whitespace for clean preview text
+  // Helper to strip HTML tags, metadata, doctypes, and extra whitespace for clean preview text
   const stripHtml = (htmlStr: string): string => {
     if (!htmlStr) return '';
     try {
-      const doc = new DOMParser().parseFromString(htmlStr, 'text/html');
+      // Remove doctype, head, style, script, and xml blocks before DOM parsing
+      let cleaned = htmlStr
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<head[\s\S]*?<\/head>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<xml[\s\S]*?<\/xml>/gi, '');
+
+      // Remove opening/closing html & body structural tags with attributes (e.g. xmlns, lang)
+      cleaned = cleaned
+        .replace(/<html[^>]*>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<body[^>]*>/gi, '')
+        .replace(/<\/body>/gi, '');
+
+      const doc = new DOMParser().parseFromString(cleaned, 'text/html');
       const text = doc.body.textContent || '';
       return text.replace(/\s+/g, ' ').trim();
     } catch (e) {
@@ -178,15 +219,62 @@ export const InboxPage = () => {
 
   const formatMessageBodyWithClickableLinks = (rawBody: string) => {
     if (!rawBody) return '';
-    let body = rawBody;
-    if (!/<a\s+/i.test(body)) {
-      body = body.replace(
+    
+    // Check if rawBody contains HTML structural tags
+    const isHtml = /<[a-z][\s\S]*>/i.test(rawBody) || /<!DOCTYPE/i.test(rawBody);
+
+    if (isHtml) {
+      // 1. Strip top-level document structure & non-renderable metadata (doctype, head, style, script)
+      let cleaned = rawBody
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<head[\s\S]*?<\/head>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<xml[\s\S]*?<\/xml>/gi, '');
+
+      // 2. Remove <html>, </html>, <body>, </body> wrapper tags with any attributes (xmlns, lang, etc.)
+      cleaned = cleaned
+        .replace(/<html[^>]*>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<body[^>]*>/gi, '')
+        .replace(/<\/body>/gi, '');
+
+      // 3. For existing <a> tags, ensure target="_blank", rel="noopener noreferrer", and link styling
+      cleaned = cleaned.replace(/<a\s+([^>]*?)>/gi, (match, p1) => {
+        let attrs = p1;
+        if (!/target\s*=/i.test(attrs)) {
+          attrs += ' target="_blank"';
+        }
+        if (!/rel\s*=/i.test(attrs)) {
+          attrs += ' rel="noopener noreferrer"';
+        }
+        if (!/style\s*=/i.test(attrs)) {
+          attrs += ' style="color: #4F46E5; text-decoration: underline; font-weight: 600; cursor: pointer; word-break: break-all;"';
+        }
+        return `<a ${attrs}>`;
+      });
+
+      return cleaned.trim();
+    } else {
+      // Plain text message: escape HTML special characters first to prevent breaking layout
+      let escaped = rawBody
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Convert URLs to clickable anchor tags
+      escaped = escaped.replace(
         /(https?:\/\/[^\s<"']+)/g,
         '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #4F46E5; text-decoration: underline; font-weight: 600; cursor: pointer; word-break: break-all;">$1</a>'
       );
+
+      // Preserve line breaks
+      escaped = escaped.replace(/\r?\n/g, '<br />');
+
+      return escaped;
     }
-    return body;
   };
+
 
   const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
