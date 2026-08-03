@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './StatCard.module.css';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpRight } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 export interface StatCardProps {
@@ -13,32 +13,54 @@ export interface StatCardProps {
   iconColor: string;
   chartData: number[];
   chartColor: string;
+  isPrimary?: boolean;
+  onClick?: () => void;
 }
 
 export const StatCard = ({
-  title, value, trend, subtitle, icon, iconBgColor, iconColor, chartData, chartColor
+  title, value, trend, subtitle, icon, iconBgColor, iconColor, chartData, chartColor, isPrimary = false, onClick
 }: StatCardProps) => {
   const isUp = trend >= 0;
   const data = chartData.map((val, i) => ({ name: i, value: val }));
 
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <div className={styles.iconWrapper} style={{ backgroundColor: iconBgColor, color: iconColor }}>
-          {icon}
+    <div 
+      className={`${styles.card} ${isPrimary ? styles.primaryCard : ''}`}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      title={onClick ? `View ${title}` : undefined}
+    >
+      <div className={styles.topRow}>
+        <div className={styles.header}>
+          <div className={styles.iconWrapper} style={{ 
+            backgroundColor: isPrimary ? 'rgba(255, 255, 255, 0.2)' : iconBgColor, 
+            color: isPrimary ? '#FFFFFF' : iconColor 
+          }}>
+            {icon}
+          </div>
+          <div className={`${styles.title} ${isPrimary ? styles.primaryText : ''}`}>{title}</div>
         </div>
-        <div className={styles.title}>{title}</div>
+        <div 
+          className={`${styles.actionBtn} ${isPrimary ? styles.primaryActionBtn : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+          title="Open module"
+        >
+          <ArrowUpRight size={16} />
+        </div>
       </div>
       
       <div className={styles.valueContainer}>
         <div className={styles.valueRow}>
-          <div className={styles.value}>{value}</div>
-          <div className={`${styles.trend} ${isUp ? styles.up : styles.down}`}>
-            {isUp ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+          <div className={`${styles.value} ${isPrimary ? styles.primaryValue : ''}`}>{value}</div>
+          <div className={`${styles.trend} ${isPrimary ? styles.primaryTrend : (isUp ? styles.up : styles.down)}`}>
+            {isUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
             {Math.abs(trend)}%
           </div>
         </div>
-        <div className={styles.subtitle}>{subtitle}</div>
+        <div className={`${styles.subtitle} ${isPrimary ? styles.primarySubtitle : ''}`}>{subtitle}</div>
       </div>
 
       <div className={styles.chart}>
@@ -47,8 +69,8 @@ export const StatCard = ({
             <Line 
               type="monotone" 
               dataKey="value" 
-              stroke={chartColor} 
-              strokeWidth={2} 
+              stroke={isPrimary ? '#FFFFFF' : chartColor} 
+              strokeWidth={2.5} 
               dot={false} 
               isAnimationActive={false} 
             />
@@ -58,3 +80,4 @@ export const StatCard = ({
     </div>
   );
 };
+

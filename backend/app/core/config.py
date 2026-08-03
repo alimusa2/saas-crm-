@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
 
+    # AI Sales Coach Keys
+    GROQ_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         import os
@@ -78,6 +84,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

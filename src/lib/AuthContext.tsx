@@ -22,24 +22,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Try to restore session on mount
+  // Try to restore session on mount with safety timeout
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (token) {
-      authApi.me()
-        .then((u) => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    let isSubscribed = true;
+    const safetyTimer = setTimeout(() => {
+      if (isSubscribed) {
+        setLoading(false);
+      }
+    }, 4000);
+
+    authApi.me()
+      .then((u) => {
+        if (isSubscribed) {
           setUser(u as Record<string, unknown>);
           setIsLoggedIn(true);
-        })
-        .catch(() => {
+        }
+      })
+      .catch(() => {
+        if (isSubscribed) {
           clearToken();
           setIsLoggedIn(false);
           setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isSubscribed = false;
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   useEffect(() => {

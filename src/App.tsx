@@ -73,7 +73,7 @@ function AppContent() {
 
     switch (activeTab) {
       case 'Dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setActiveTab} />;
       case 'Inbox':
         return <InboxPage />;
       case 'Leads':

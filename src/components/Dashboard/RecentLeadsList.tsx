@@ -13,9 +13,10 @@ function formatDate(iso: string) {
 
 interface RecentLeadsListProps {
   initialLeads?: Lead[];
+  onNavigate?: (tab: string) => void;
 }
 
-export const RecentLeadsList: React.FC<RecentLeadsListProps> = ({ initialLeads }) => {
+export const RecentLeadsList: React.FC<RecentLeadsListProps> = ({ initialLeads, onNavigate }) => {
   const [leads, setLeads] = useState<Lead[]>(initialLeads ? initialLeads.slice(0, 5) : []);
   const [loading, setLoading] = useState(!initialLeads);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,13 @@ export const RecentLeadsList: React.FC<RecentLeadsListProps> = ({ initialLeads }
     <div className={styles.card}>
       <div className={styles.header}>
         <h2 className={styles.title}>Recent Leads</h2>
-        <a href="#" className={styles.viewAll}>View all</a>
+        <button 
+          type="button" 
+          className={styles.viewAll}
+          onClick={() => onNavigate?.('Leads')}
+        >
+          View all
+        </button>
       </div>
 
       <div className={styles.table}>

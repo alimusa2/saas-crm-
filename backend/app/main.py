@@ -453,13 +453,10 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to GrowthOS API"}
+from app.modules.health.router import router as health_router
 
-@app.get("/api/v1/health")
-async def health_check():
-    return {"status": "healthy"}
+app.include_router(health_router, prefix="", tags=["health"])
+app.include_router(health_router, prefix="/api/v1", tags=["health"])
 
 # Mount static files for media uploads
 os.makedirs("static/uploads", exist_ok=True)
@@ -486,6 +483,8 @@ from app.modules.team.performance_router import router as performance_router
 app.include_router(performance_router, prefix="/api/v1/team/performance", tags=["team-performance"])
 app.include_router(team_router, prefix="/api/v1/team", tags=["team"])
 app.include_router(campaigns_router, prefix="/api/v1/campaigns", tags=["campaigns"])
+from app.modules.ai_coach.router import router as ai_coach_router
+app.include_router(ai_coach_router, prefix="/api/v1/ai-coach", tags=["ai-coach"])
 from app.modules.websocket.router import router as ws_router
 app.include_router(ws_router, tags=["websocket"])
 

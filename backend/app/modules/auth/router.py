@@ -12,18 +12,26 @@ router = APIRouter()
 def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
     return AuthService(db)
 
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserCreate, auth_service: AuthService = Depends(get_auth_service)):
+async def register(
+    user_in: UserCreate, 
+    background_tasks: BackgroundTasks,
+    auth_service: AuthService = Depends(get_auth_service)
+):
     """
     Register a new user and create a new organization for them.
     """
-    user = await auth_service.create_user_with_organization(user_in)
+    user = await auth_service.create_user_with_organization(user_in, background_tasks=background_tasks)
     return user
+
 
 @router.post("/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     OAuth2 compatible token login, get an access token for future requests.
@@ -36,7 +44,12 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     await auth_service.record_login_log(user, status="Success")
-    return auth_service.create_tokens(user)
+    
+    from app.modules.auth.dependencies import get_employee_context
+    emp_ctx = await get_employee_context(user, db)
+    role = emp_ctx.get("role", "Admin" if user.is_superuser else "Employee")
+    
+    return auth_service.create_tokens(user, role=role)
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(

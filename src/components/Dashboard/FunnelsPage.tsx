@@ -6448,6 +6448,100 @@ export const FunnelsPage = () => {
       )}
 
 
+      {/* Create Funnel Modal */}
+      {isCreateModalOpen && (
+        <div className={styles.modalOverlay} onClick={() => setIsCreateModalOpen(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', width: '90%' }}>
+            <div className={styles.modalHeaderRow}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EEF2FF', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Plus size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#1E293B' }}>Create New Funnel</h2>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>Build a high-converting lead generation or sales funnel.</p>
+                </div>
+              </div>
+              <button type="button" className={styles.closeModalBtn} onClick={() => setIsCreateModalOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleCreateFunnel} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Funnel Name <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="e.g. Q3 Growth Campaign, Masterclass Registration..."
+                  value={newFunnel.name}
+                  onChange={e => setNewFunnel(prev => ({ ...prev, name: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '14px', border: '1px solid #CBD5E1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Description (Optional)
+                </label>
+                <textarea
+                  placeholder="Brief summary of this funnel's objective..."
+                  value={newFunnel.description}
+                  onChange={e => setNewFunnel(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '13px', border: '1px solid #CBD5E1', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Funnel Goal / Type
+                </label>
+                <select
+                  value={newFunnel.type}
+                  onChange={e => setNewFunnel(prev => ({ ...prev, type: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '13px', border: '1px solid #CBD5E1', borderRadius: '8px', outline: 'none', background: '#FFF' }}
+                >
+                  <option value="Lead">Lead Capture & Opt-in</option>
+                  <option value="Sales">Direct Sales & Checkout</option>
+                  <option value="Webinar">Webinar & Event Booking</option>
+                  <option value="Appointment">Consultation Scheduling</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                <button
+                  type="button"
+                  className={styles.viewModeBtn}
+                  onClick={() => setIsCreateModalOpen(false)}
+                  style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newFunnel.name.trim()}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    background: !newFunnel.name.trim() ? '#C7D2FE' : 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: !newFunnel.name.trim() ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 6px rgba(99, 102, 241, 0.25)'
+                  }}
+                >
+                  Create Funnel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Create Funnel Step Modal */}
       {isStepModalOpen && (
         <div className={styles.modalOverlay} onClick={() => setIsStepModalOpen(false)}>

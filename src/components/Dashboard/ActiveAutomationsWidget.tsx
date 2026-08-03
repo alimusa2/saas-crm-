@@ -10,14 +10,24 @@ const workflow = [
   { id: 5, title: 'Add to Pipeline', type: 'Action', icon: <Users size={16} />, bgColor: '#F5F3FF', color: '#8B5CF6' },
 ];
 
-export const ActiveAutomationsWidget = () => {
+interface ActiveAutomationsWidgetProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const ActiveAutomationsWidget: React.FC<ActiveAutomationsWidgetProps> = ({ onNavigate }) => {
   const [isActive, setIsActive] = useState(true);
 
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <h2 className={styles.title}>Active Automations</h2>
-        <a href="#" className={styles.viewAll}>View all</a>
+        <button 
+          type="button" 
+          className={styles.viewAll}
+          onClick={() => onNavigate?.('Automations')}
+        >
+          View all
+        </button>
       </div>
 
       <div className={styles.workflow}>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './Layout.module.css';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { Header } from '../Header/Header';
+import { AISalesCoachDrawer } from '../AICoach/AISalesCoachDrawer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -53,6 +54,9 @@ export const Layout = ({ children, activeItem, onSelectItem }: LayoutProps) => {
           {children}
         </main>
       </div>
+
+      {/* Global AI Sales Coach Floating Assistant */}
+      <AISalesCoachDrawer />
     </div>
   );
 };

@@ -1,8 +1,12 @@
-from sqlalchemy import Column, String, ForeignKey, Boolean, Text, JSON, DateTime
+from sqlalchemy import Column, String, ForeignKey, Boolean, Text, JSON, DateTime, Index
 from app.db.base_class import TenantAwareBase
 from datetime import datetime, timezone
 
 class TeamMember(TenantAwareBase):
+    __table_args__ = (
+        Index("ix_tm_org_user", "organization_id", "user_id"),
+        Index("ix_tm_org_email", "organization_id", "email"),
+    )
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)

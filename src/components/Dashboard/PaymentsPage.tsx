@@ -4,7 +4,7 @@ import { paymentsApi, crmApi, contactsApi } from '../../lib/api';
 import type { Invoice, Lead, Contact, Company } from '../../lib/api';
 import {
   Plus, DollarSign, FileText, CreditCard, X, Search,
-  AlertTriangle, CheckCircle2, XCircle, Send, Trash2, RefreshCw, Clock
+  AlertTriangle, CheckCircle2, XCircle, Send, Trash2, RefreshCw, Clock, Printer, Eye
 } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 
@@ -37,8 +37,39 @@ export const PaymentsPage = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<Invoice | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const toastIdRef = useRef(0);
+
+  const handlePrintInvoice = (inv: Invoice, autoPrint: boolean = false) => {
+    setSelectedInvoiceForPrint(inv);
+    setIsPrintModalOpen(true);
+    if (autoPrint) {
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    }
+  };
+
+  const handlePreviewFormInvoice = (autoPrint: boolean = false) => {
+    const currentFormInvoice: Invoice = {
+      id: 'draft_' + Date.now(),
+      organization_id: 'org_1',
+      number: newInvoice.number || generateInvoiceNumber(invoices),
+      amount: parseFloat(newInvoice.amount) || 0,
+      currency: newInvoice.currency || 'USD',
+      description: newInvoice.description || 'Consulting & CRM Services Rendered',
+      status: newInvoice.status || 'Sent',
+      due_date: newInvoice.due_date || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      recipient_name: newInvoice.recipient_name || 'Valued Customer',
+      recipient_email: newInvoice.recipient_email || '',
+      recipient_phone: newInvoice.recipient_phone || '',
+      billing_address: newInvoice.billing_address || '',
+      created_at: new Date().toISOString()
+    };
+    handlePrintInvoice(currentFormInvoice, autoPrint);
+  };
 
   // Filter & Search
   const [activeTab, setActiveTab] = useState<'all' | 'paid' | 'unpaid' | 'overdue' | 'failed'>('all');
@@ -381,6 +412,20 @@ export const PaymentsPage = () => {
             </select>
           </div>
 
+          <button
+            className={styles.addBtn}
+            title="Print or export printable invoice document"
+            onClick={() => {
+              if (invoices.length > 0) {
+                handlePrintInvoice(invoices[0]);
+              } else {
+                handlePreviewFormInvoice(false);
+              }
+            }}
+          >
+            <Printer size={18} /> Print Invoice
+          </button>
+
           <button className={styles.addBtn} onClick={handleOpenModal}>
             <Plus size={18} /> Create Invoice
           </button>
@@ -532,9 +577,18 @@ export const PaymentsPage = () => {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div className={styles.actionGroup} style={{ justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className={`${styles.actionBtn} ${styles.printAction}`}
+                        title="Print / View Official Invoice"
+                        onClick={() => handlePrintInvoice(inv)}
+                      >
+                        <Printer size={13} /> Print
+                      </button>
+
                       {inv.status === 'Paid' ? (
                         <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <CheckCircle2 size={13} /> Paid & Receipt Sent
+                          <CheckCircle2 size={13} /> Paid
                         </span>
                       ) : (
                         <>
@@ -627,7 +681,7 @@ export const PaymentsPage = () => {
               {/* Recipient Selection */}
               <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginBottom: '16px', background: '#F8FAFC' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', marginBottom: '10px' }}>Lead / Recipient Details</div>
-                
+
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label>Recipient Type</label>
@@ -723,14 +777,259 @@ export const PaymentsPage = () => {
                 />
               </div>
 
-              <div className={styles.modalActions}>
+              <div className={styles.modalActions} style={{ flexWrap: 'wrap', gap: '8px' }}>
                 <button type="button" className={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className={styles.printPreviewBtn}
+                  onClick={() => handlePreviewFormInvoice(false)}
+                  title="Preview printable invoice document before creating"
+                >
+                  <Eye size={15} /> Print Preview
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.printAction}`}
+                  style={{ padding: '9px 16px', fontSize: '13.5px' }}
+                  onClick={() => handlePreviewFormInvoice(true)}
+                  title="Print invoice document"
+                >
+                  <Printer size={15} /> Print
+                </button>
                 <button type="submit" className={styles.submitBtn}>Create & Send Invoice Email</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Print / Preview Invoice Modal */}
+      {isPrintModalOpen && selectedInvoiceForPrint && (
+        <div className={styles.modalOverlay} onClick={() => setIsPrintModalOpen(false)}>
+          <div className={styles.printInvoiceModal} onClick={e => e.stopPropagation()}>
+            <div className={`${styles.printHeaderBar} ${styles.noPrint}`}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} style={{ color: 'var(--primary-color)' }} />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Official GrowthOS CRM Invoice</h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className={styles.printPreviewBtn}
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/invoice/${selectedInvoiceForPrint.number}`);
+                    showToast('Public Invoice link copied to clipboard!', 'success');
+                  }}
+                  title="Copy shareable invoice link"
+                >
+                  <Send size={14} /> Share Link
+                </button>
+                {selectedInvoiceForPrint.status !== 'Paid' && (
+                  <button
+                    type="button"
+                    className={`${styles.actionBtn} ${styles.payAction}`}
+                    style={{ padding: '7px 14px', fontSize: '13px' }}
+                    onClick={() => {
+                      handleMarkPaid(selectedInvoiceForPrint);
+                      setSelectedInvoiceForPrint({ ...selectedInvoiceForPrint, status: 'Paid' });
+                    }}
+                  >
+                    <CheckCircle2 size={14} /> Mark Paid
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.addBtn}
+                  style={{ padding: '7px 16px', fontSize: '13px' }}
+                  onClick={() => window.print()}
+                >
+                  <Printer size={15} /> Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: '20px', padding: '0 4px' }}
+                >×</button>
+              </div>
+            </div>
+
+            {/* Printable Document Body */}
+            <div>
+              {/* Brand Header */}
+              <div className={styles.printBrandHeader}>
+                <div>
+                  <div className={styles.brandLogoBox}>
+                    <div className={styles.brandLogoBadge}>G</div>
+                    <div>
+                      <div className={styles.brandTitle}>GrowthOS CRM</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#6366F1', letterSpacing: '0.04em' }}>
+                        BY SID INNOVATIONS
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.brandSubtitle} style={{ marginTop: '8px' }}>
+                    Enterprise Customer Relationship & Billing Platform<br />
+                    100 Innovation Way, Tech Park, Suite 400 • San Francisco, CA 94105<br />
+                    billing@growthos.com • +1 (800) 555-0199 • Tax ID: US-987654321
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.5px' }}>INVOICE</div>
+                  <div className={styles.invoiceNumBadge}>{selectedInvoiceForPrint.number}</div>
+                  <div style={{ marginTop: '8px' }}>
+                    <span
+                      className={styles.statusBadge}
+                      style={{
+                        background: (STATUS_COLORS[selectedInvoiceForPrint.status] || STATUS_COLORS.Draft).bg,
+                        color: (STATUS_COLORS[selectedInvoiceForPrint.status] || STATUS_COLORS.Draft).color,
+                        fontSize: '12px',
+                        padding: '4px 14px'
+                      }}
+                    >
+                      {selectedInvoiceForPrint.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Billed To & Dates Grid */}
+              <div className={styles.printGrid}>
+                <div className={styles.partyCard}>
+                  <div className={styles.partyCardTitle}>Billed To (Client / Customer):</div>
+                  <div className={styles.partyName}>{selectedInvoiceForPrint.recipient_name || 'Valued Client'}</div>
+                  {selectedInvoiceForPrint.recipient_company && (
+                    <div className={styles.partyDetail} style={{ fontWeight: 600 }}>{selectedInvoiceForPrint.recipient_company}</div>
+                  )}
+                  {selectedInvoiceForPrint.recipient_email && (
+                    <div className={styles.partyDetail}>✉️ {selectedInvoiceForPrint.recipient_email}</div>
+                  )}
+                  {selectedInvoiceForPrint.recipient_phone && (
+                    <div className={styles.partyDetail}>📞 {selectedInvoiceForPrint.recipient_phone}</div>
+                  )}
+                  {selectedInvoiceForPrint.billing_address && (
+                    <div className={styles.partyDetail} style={{ marginTop: '6px' }}>📍 {selectedInvoiceForPrint.billing_address}</div>
+                  )}
+                  {selectedInvoiceForPrint.tax_information && (
+                    <div className={styles.partyDetail} style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>
+                      Tax ID / VAT: {selectedInvoiceForPrint.tax_information}
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.partyCard} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className={styles.partyCardTitle}>Invoice Metadata & Schedule:</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748B', fontWeight: 500 }}>Invoice Date:</span>
+                    <span style={{ fontWeight: 600, color: '#1E293B' }}>
+                      {new Date(selectedInvoiceForPrint.created_at || Date.now()).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748B', fontWeight: 500 }}>Payment Due Date:</span>
+                    <span style={{ fontWeight: 700, color: '#DC2626' }}>
+                      {selectedInvoiceForPrint.due_date ? new Date(selectedInvoiceForPrint.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Due on Receipt'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                    <span style={{ color: '#64748B', fontWeight: 500 }}>Billing Currency:</span>
+                    <span style={{ fontWeight: 700, color: '#1E293B' }}>{selectedInvoiceForPrint.currency || 'USD'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748B', fontWeight: 500 }}>Payment Status:</span>
+                    <span style={{ fontWeight: 700, color: selectedInvoiceForPrint.status === 'Paid' ? '#059669' : '#D97706' }}>
+                      {selectedInvoiceForPrint.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+                <table className={styles.invoiceItemsTable}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>#</th>
+                      <th>Description / Service Line</th>
+                      <th style={{ textAlign: 'center', width: '80px' }}>Qty</th>
+                      <th style={{ textAlign: 'right', width: '120px' }}>Unit Price</th>
+                      <th style={{ textAlign: 'right', width: '120px' }}>Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedInvoiceForPrint.items && selectedInvoiceForPrint.items.length > 0 ? selectedInvoiceForPrint.items : [
+                      {
+                        id: 'item_1',
+                        description: selectedInvoiceForPrint.description || 'GrowthOS CRM Subscription & Enterprise Consulting Services',
+                        quantity: 1,
+                        unit_price: selectedInvoiceForPrint.amount || 0,
+                        amount: selectedInvoiceForPrint.amount || 0
+                      }
+                    ]).map((item, idx) => (
+                      <tr key={item.id || idx}>
+                        <td style={{ fontWeight: 600, color: '#64748B' }}>{idx + 1}</td>
+                        <td style={{ fontWeight: 500 }}>{item.description}</td>
+                        <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          ${(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                          ${((item.quantity || 1) * (item.unit_price || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Total Calculation Row */}
+              <div className={styles.summaryBoxWrapper}>
+                <div className={styles.summaryBox}>
+                  <div className={styles.summaryRow}>
+                    <span>Subtotal:</span>
+                    <span>${(selectedInvoiceForPrint.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Tax (0%):</span>
+                    <span>$0.00</span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Discount:</span>
+                    <span>$0.00</span>
+                  </div>
+                  <div className={styles.summaryTotalRow}>
+                    <span>Total Amount Due:</span>
+                    <span>${(selectedInvoiceForPrint.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedInvoiceForPrint.currency || 'USD'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank & Payment Information + Terms Block */}
+              <div className={styles.bankNotesGrid}>
+                <div className={styles.notesBox}>
+                  <div style={{ fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>💳 Remittance & Bank Wire Details:</div>
+                  <p style={{ margin: '2px 0' }}><strong>Bank:</strong> Growth National Bank</p>
+                  <p style={{ margin: '2px 0' }}><strong>Account Name:</strong> GrowthOS Technologies Inc. / Sid Innovations</p>
+                  <p style={{ margin: '2px 0' }}><strong>Account / IBAN:</strong> US89 3704 0044 0532 0130 00</p>
+                  <p style={{ margin: '2px 0' }}><strong>SWIFT / BIC:</strong> GROWUS33XXX</p>
+                </div>
+
+                <div className={styles.notesBox}>
+                  <div style={{ fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>📝 Notes & Payment Terms:</div>
+                  <p style={{ margin: '2px 0' }}>Please reference Invoice Number <strong>{selectedInvoiceForPrint.number}</strong> on all payments.</p>
+                  <p style={{ margin: '2px 0' }}>Thank you for choosing GrowthOS CRM for your business operations!</p>
+                </div>
+              </div>
+
+              {/* Printable Footer */}
+              <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px', textAlign: 'center', fontSize: '11.5px', color: '#94A3B8' }}>
+                GrowthOS CRM • Official Invoice Document • Generated electronically on {new Date().toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

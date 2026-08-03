@@ -1,8 +1,14 @@
-from sqlalchemy import Column, String, ForeignKey, Text, Boolean
+from sqlalchemy import Column, String, ForeignKey, Text, Boolean, Index
 from app.db.base_class import TenantAwareBase
 
 class Message(TenantAwareBase):
     """Represents an internal message, email, or SMS in a CRM conversation thread."""
+    __table_args__ = (
+        Index("ix_msg_org_created", "organization_id", "created_at"),
+        Index("ix_msg_org_lead", "organization_id", "lead_id"),
+        Index("ix_msg_org_contact", "organization_id", "contact_id"),
+        Index("ix_msg_org_thread", "organization_id", "gmail_thread_id"),
+    )
     subject = Column(String, nullable=True)
     body = Column(Text, nullable=False)
     sender_id = Column(String, ForeignKey("user.id"), nullable=True)

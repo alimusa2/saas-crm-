@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styles from './DashboardPage.module.css';
 import { Calendar as CalendarIcon, Users, CalendarDays, Percent, DollarSign, CheckSquare, LogOut, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
-import { crmApi, tasksApi, pipelineApi, calendarApi, funnelsApi, paymentsApi, type Lead, type Task, type Deal } from '../../lib/api';
+import { useWebSocket } from '../../lib/useWebSocket';
+import { crmApi, tasksApi, pipelineApi, calendarApi, paymentsApi, type Lead, type Task, type Deal } from '../../lib/api';
 
 import { StatCard } from './StatCard';
 import { LeadsOverviewChart } from './LeadsOverviewChart';
@@ -10,9 +11,6 @@ import { PipelineFunnel } from './PipelineFunnel';
 import { TasksList } from './TasksList';
 import { RecentLeadsList } from './RecentLeadsList';
 import { FunnelsList } from './FunnelsList';
-import { QuickActions } from './QuickActions';
-import { IntegrationsWidget } from './IntegrationsWidget';
-import { ActiveAutomationsWidget } from './ActiveAutomationsWidget';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -21,7 +19,11 @@ function getGreeting() {
   return 'Good evening';
 }
 
-export const DashboardPage = () => {
+interface DashboardPageProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const { user, logout } = useAuth();
   const firstName = (user?.first_name as string) ?? (user?.sub as string) ?? 'there';
 
@@ -67,13 +69,12 @@ export const DashboardPage = () => {
       setTasks(tasksArr);
       setDeals(dealsArr);
 
-
       // 1. Total Leads & Conversion
       const totalLeads = leadsArr.length;
       const qualified = leadsArr.filter(l => l.status === 'Qualified' || l.status === 'Contacted' || l.status === 'Won').length;
       const conversionRateVal = totalLeads > 0 ? ((qualified / totalLeads) * 100).toFixed(1) + '%' : '0.0%';
 
-      // 2. Revenue calculation (Paid Invoices first, fallback to Deals Pipeline Value)
+      // 2. Revenue calculation
       const paidInvoicesTotal = invsArr.filter(i => i.status === 'Paid').reduce((sum, i) => sum + (Number(i.amount) || Number((i as any).total) || 0), 0);
       const pipelineDealsTotal = dealsArr.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
       const totalRevNumber = paidInvoicesTotal > 0 ? paidInvoicesTotal : pipelineDealsTotal;
@@ -111,13 +112,37 @@ export const DashboardPage = () => {
     }
   }, []);
 
-  // Initial fetch + 60 second real-time polling interval (optimized for egress)
+  // Connect WebSocket for instant live synchronization
+  useWebSocket(loadDashboardData);
+
+  // Initial fetch + 15 second auto-sync polling + tab focus & visibility synchronization
   useEffect(() => {
     loadDashboardData();
+
+    const handleSync = () => {
+      loadDashboardData();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadDashboardData();
+      }
+    };
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('crm-data-changed', handleSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     const interval = setInterval(() => {
       loadDashboardData();
-    }, 60000);
-    return () => clearInterval(interval);
+    }, 15000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('crm-data-changed', handleSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [loadDashboardData]);
 
   const isAdmin = Boolean(
@@ -128,7 +153,6 @@ export const DashboardPage = () => {
 
   return (
     <div className={styles.container}>
-      {/* Real-time Header */}
       <div className={styles.header}>
         <div>
           <h1 className={styles.greeting}>{getGreeting()}, {firstName}! 👋</h1>
@@ -150,7 +174,7 @@ export const DashboardPage = () => {
             disabled={isRefreshing}
           >
             <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
-            <span>Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>Updated {lastUpdated.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
           </button>
           <button className={styles.datePicker}>
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -167,8 +191,20 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Real-time Stat Cards */}
-      <div className={styles.statsRow}>
+      {/* 1. All Stat Cards Aligned in a Single Line Across Top */}
+      <div className={styles.statsRowSingleLine}>
+        <StatCard 
+          title={isAdmin ? "Total Revenue" : "My Revenue"} 
+          value={stats.revenueTotal} 
+          trend={24.5} 
+          subtitle="vs previous 30 days" 
+          icon={<DollarSign size={20} />} 
+          iconBgColor="#ECFDF5" 
+          iconColor="#10B981"
+          chartData={stats.revenueChartData.some(v => v > 0) ? stats.revenueChartData : [10, 15, 12, 18, 22, 20, 25]}
+          chartColor="#10B981"
+          onClick={() => onNavigate?.('Payments')}
+        />
         <StatCard 
           title={isAdmin ? "Total Leads" : "My Leads"} 
           value={stats.totalLeads.toLocaleString()} 
@@ -179,39 +215,31 @@ export const DashboardPage = () => {
           iconColor="#8B5CF6"
           chartData={stats.leadChartData}
           chartColor="#8B5CF6"
+          onClick={() => onNavigate?.('Leads')}
         />
         <StatCard 
           title={isAdmin ? "Appointments" : "My Meetings"} 
           value={stats.appointmentsCount.toLocaleString()} 
-          trend={12.4} 
+          trend={-2.65} 
           subtitle="vs previous 30 days" 
           icon={<CalendarDays size={20} />} 
           iconBgColor="#EFF6FF" 
           iconColor="#3B82F6"
           chartData={[5, 8, 7, 10, 12, 11, 15]}
           chartColor="#3B82F6"
+          onClick={() => onNavigate?.('Calendar')}
         />
         <StatCard 
-          title={isAdmin ? "Conversion Rate" : "My Conversion Rate"} 
+          title={isAdmin ? "Conversion Rate" : "My Conversion"} 
           value={stats.conversionRate} 
-          trend={8.7} 
+          trend={5.67} 
           subtitle="vs previous 30 days" 
           icon={<Percent size={20} />} 
           iconBgColor="#FEF2F2" 
           iconColor="#EF4444"
           chartData={[20, 22, 21, 23, 24, 25, 26]}
           chartColor="#10B981"
-        />
-        <StatCard 
-          title={isAdmin ? "Revenue" : "My Revenue"} 
-          value={stats.revenueTotal} 
-          trend={24.5} 
-          subtitle="vs previous 30 days" 
-          icon={<DollarSign size={20} />} 
-          iconBgColor="#ECFDF5" 
-          iconColor="#10B981"
-          chartData={stats.revenueChartData}
-          chartColor="#10B981"
+          onClick={() => onNavigate?.('Pipeline')}
         />
         <StatCard 
           title={isAdmin ? "Tasks Due" : "My Pending Tasks"} 
@@ -223,30 +251,24 @@ export const DashboardPage = () => {
           iconColor="#F43F5E"
           chartData={stats.tasksChartData}
           chartColor="#F43F5E"
+          onClick={() => onNavigate?.('Tasks')}
         />
       </div>
 
-      <div className={styles.gridRow}>
+      {/* 2. Graphs Directly Below Stat Cards */}
+      <div className={styles.chartsRow}>
         <LeadsOverviewChart leads={leads} />
         <PipelineFunnel deals={deals} />
-        <TasksList initialTasks={tasks} />
       </div>
 
-      <div className={styles.gridRow}>
-        <RecentLeadsList initialLeads={leads} />
-        <FunnelsList />
-        <div className={styles.colFlex}>
-
-          <QuickActions />
-          {isAdmin && <IntegrationsWidget />}
-        </div>
+      {/* 3. Operational Lists Below Graphs */}
+      <div className={styles.listsRow}>
+        <RecentLeadsList initialLeads={leads} onNavigate={onNavigate} />
+        <TasksList initialTasks={tasks} onNavigate={onNavigate} />
+        <FunnelsList onNavigate={onNavigate} />
       </div>
-
-      {isAdmin && (
-        <div className={styles.fullRow}>
-          <ActiveAutomationsWidget />
-        </div>
-      )}
     </div>
   );
 };
+
+

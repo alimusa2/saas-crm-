@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, DateTime, Boolean
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Text, DateTime, Boolean, Index
 from sqlalchemy.orm import relationship
 from app.db.base_class import TenantAwareBase
 from app.modules.calendar.models import Appointment  # noqa: F401
 
 class Lead(TenantAwareBase):
+    __table_args__ = (
+        Index("ix_lead_org_created", "organization_id", "created_at"),
+        Index("ix_lead_org_status", "organization_id", "status"),
+    )
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, index=True, nullable=True)

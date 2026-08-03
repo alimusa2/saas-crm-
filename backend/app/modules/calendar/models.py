@@ -1,7 +1,11 @@
-from sqlalchemy import Column, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, String, ForeignKey, DateTime, Text, Index
 from app.db.base_class import TenantAwareBase
 
 class Appointment(TenantAwareBase):
+    __table_args__ = (
+        Index("ix_appt_org_start", "organization_id", "start_time"),
+        Index("ix_appt_org_assigned", "organization_id", "assigned_to_id"),
+    )
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     start_time = Column(DateTime(timezone=True), nullable=False)

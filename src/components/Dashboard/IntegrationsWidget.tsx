@@ -8,12 +8,23 @@ const integrations = [
   { id: 4, name: 'WhatsApp', icon: <span style={{color: '#25D366'}}>W</span>, status: 'Coming Soon', isConnected: false },
 ];
 
-export const IntegrationsWidget = () => {
+interface IntegrationsWidgetProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const IntegrationsWidget: React.FC<IntegrationsWidgetProps> = ({ onNavigate }) => {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <h2 className={styles.title}>Integrations</h2>
-        <a href="#" className={styles.manage}>Manage</a>
+        <button 
+          type="button" 
+          className={styles.manage}
+          onClick={() => onNavigate?.('Integrations')}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
+          View all / Manage
+        </button>
       </div>
 
       <div className={styles.list}>

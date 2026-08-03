@@ -49,35 +49,48 @@ export async function api<T = unknown>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const resp = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort(new Error('API request timed out after 30 seconds'));
+  }, 30000);
 
-  if (!resp.ok) {
-    if (resp.status === 401) {
-      clearToken();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('auth:unauthorized'));
+  try {
+    const resp = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers,
+      signal: init.signal || controller.signal,
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 401) {
+        clearToken();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('auth:unauthorized'));
+        }
       }
+      let msg = `HTTP ${resp.status}`;
+      let detail: any = null;
+      try {
+        const j = await resp.json();
+        detail = j.detail;
+        msg = typeof detail === 'string' ? detail : (detail?.message ?? msg);
+      } catch {}
+      const err = new Error(msg) as any;
+      err.status = resp.status;
+      err.detail = detail;
+      throw err;
     }
-    let msg = `HTTP ${resp.status}`;
-    let detail: any = null;
-    try {
-      const j = await resp.json();
-      detail = j.detail;
-      msg = typeof detail === 'string' ? detail : (detail?.message ?? msg);
-    } catch {}
-    const err = new Error(msg) as any;
-    err.status = resp.status;
-    err.detail = detail;
-    throw err;
-  }
-  // 204 No Content
-  if (resp.status === 204) return undefined as T;
+    // 204 No Content
+    if (resp.status === 204) return undefined as T;
 
-  const data = await resp.json();
-  if (isCacheable) {
-    apiCache.set(path, { timestamp: Date.now(), data });
+    const data = await resp.json();
+    if (isCacheable) {
+      apiCache.set(path, { timestamp: Date.now(), data });
+    }
+    return data as T;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data as T;
 }
 
 

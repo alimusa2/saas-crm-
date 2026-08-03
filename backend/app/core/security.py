@@ -12,14 +12,23 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+import asyncio
+
 security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    return await asyncio.to_thread(pwd_context.verify, plain_password, hashed_password)
+
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+async def get_password_hash_async(password: str) -> str:
+    return await asyncio.to_thread(pwd_context.hash, password)
+
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -56,6 +65,9 @@ async def get_current_user(
     user_id = payload.get("sub") or payload.get("user_id") or "system"
     org_id = payload.get("org") or payload.get("organization_id")
     
+    is_superuser_in_payload = "is_superuser" in payload
+    role_in_payload = "role" in payload
+    
     is_superuser = payload.get("is_superuser", False)
     role = payload.get("role", "Member")
     
@@ -67,39 +79,49 @@ async def get_current_user(
     from sqlalchemy import select
 
     if user_id and user_id != "system":
-        cache_key = f"auth_user_role:{user_id}"
-        cached_auth = await cache_get(cache_key)
-        if cached_auth:
-            org_id = cached_auth.get("org_id") or org_id
-            is_superuser = cached_auth.get("is_superuser", False)
-            role = cached_auth.get("role", "Member")
+        if org_id and is_superuser_in_payload and role_in_payload:
+            # Fast path: organization_id, is_superuser, and role are all explicitly in JWT payload
+            pass
         else:
-            try:
-                async with AsyncSessionLocal() as db:
-                    res = await db.execute(select(User).where(User.id == user_id))
-                    user = res.scalars().first()
-                    if user:
-                        if user.organization_id:
-                            org_id = user.organization_id
-                        is_superuser = user.is_superuser
+            cache_key = f"auth_user_role:{user_id}"
+            cached_auth = await cache_get(cache_key)
+            if cached_auth:
+                org_id = org_id or cached_auth.get("org_id")
+                if not is_superuser_in_payload:
+                    is_superuser = cached_auth.get("is_superuser", False)
+                if not role_in_payload:
+                    role = cached_auth.get("role", "Member")
+            else:
+                try:
+                    async with AsyncSessionLocal() as db:
+                        res = await db.execute(select(User).where(User.id == user_id))
+                        user = res.scalars().first()
+                        if user:
+                            if user.organization_id:
+                                org_id = user.organization_id
+                            if not is_superuser_in_payload:
+                                is_superuser = bool(user.is_superuser)
 
-                        if is_superuser:
-                            role = "Admin"
-                        else:
-                            res_tm = await db.execute(
-                                select(TeamMember).where(
-                                    TeamMember.user_id == user_id,
-                                    TeamMember.is_deleted == False
-                                )
-                            )
-                            tm = res_tm.scalars().first()
-                            if tm:
-                                role = tm.role
+                            if is_superuser:
+                                if not role_in_payload:
+                                    role = "Admin"
+                            else:
+                                if not role_in_payload:
+                                    res_tm = await db.execute(
+                                        select(TeamMember).where(
+                                            TeamMember.user_id == user_id,
+                                            TeamMember.is_deleted == False
+                                        )
+                                    )
+                                    tm = res_tm.scalars().first()
+                                    if tm:
+                                        role = tm.role
+                                    else:
+                                        role = "Member"
 
-                        # Cache resolved auth info for 15 minutes (900 seconds)
-                        await cache_set(cache_key, {"org_id": org_id, "is_superuser": is_superuser, "role": role}, expire_seconds=900)
-            except Exception:
-                pass
+                            await cache_set(cache_key, {"org_id": org_id, "is_superuser": bool(is_superuser), "role": role}, expire_seconds=900)
+                except Exception:
+                    pass
 
     if not org_id:
         org_id = "default_org"
@@ -108,7 +130,7 @@ async def get_current_user(
     payload["user_id"] = user_id
     payload["org"] = org_id
     payload["organization_id"] = org_id
-    payload["is_superuser"] = is_superuser
+    payload["is_superuser"] = bool(is_superuser)
     payload["role"] = role
     return payload
 

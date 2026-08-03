@@ -15,9 +15,10 @@ function formatDue(iso?: string): { label: string; type: string } {
 
 interface TasksListProps {
   initialTasks?: Task[];
+  onNavigate?: (tab: string) => void;
 }
 
-export const TasksList: React.FC<TasksListProps> = ({ initialTasks }) => {
+export const TasksList: React.FC<TasksListProps> = ({ initialTasks, onNavigate }) => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks || []);
   const [loading, setLoading] = useState(!initialTasks);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +47,13 @@ export const TasksList: React.FC<TasksListProps> = ({ initialTasks }) => {
     <div className={styles.card}>
       <div className={styles.header}>
         <h2 className={styles.title}>Tasks Due Soon</h2>
-        <a href="#" className={styles.viewAll}>View all</a>
+        <button 
+          type="button" 
+          className={styles.viewAll}
+          onClick={() => onNavigate?.('Tasks')}
+        >
+          View all
+        </button>
       </div>
 
       <div className={styles.list}>

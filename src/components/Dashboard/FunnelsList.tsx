@@ -4,7 +4,11 @@ import { funnelsApi } from '../../lib/api';
 import type { Funnel } from '../../lib/api';
 import { Globe } from 'lucide-react';
 
-export const FunnelsList = () => {
+interface FunnelsListProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const FunnelsList: React.FC<FunnelsListProps> = ({ onNavigate }) => {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
 
   useEffect(() => {
@@ -18,6 +22,13 @@ export const FunnelsList = () => {
       <div className={styles.card}>
         <div className={styles.header}>
           <h2 className={styles.title}>Top Funnels</h2>
+          <button 
+            type="button" 
+            className={styles.viewAll}
+            onClick={() => onNavigate?.('Funnels')}
+          >
+            View all
+          </button>
         </div>
         <div className={styles.empty}>
           <p>No funnels created yet.</p>
@@ -32,8 +43,17 @@ export const FunnelsList = () => {
   return (
     <div className={styles.card}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Your Funnels</h2>
-        <span className={styles.badge}>{published.length} live</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 className={styles.title}>Your Funnels</h2>
+          <span className={styles.badge}>{published.length} live</span>
+        </div>
+        <button 
+          type="button" 
+          className={styles.viewAll}
+          onClick={() => onNavigate?.('Funnels')}
+        >
+          View all
+        </button>
       </div>
 
       <div className={styles.list}>

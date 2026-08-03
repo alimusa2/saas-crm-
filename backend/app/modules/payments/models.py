@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, Float, ForeignKey, Integer, Text, DateTime
+from sqlalchemy import Column, String, Float, ForeignKey, Integer, Text, DateTime, Index
 from sqlalchemy.orm import relationship
 from app.db.base_class import TenantAwareBase
 
 class Invoice(TenantAwareBase):
     """Represents a payment invoice issued to a lead/contact/company."""
+    __table_args__ = (
+        Index("ix_inv_org_status", "organization_id", "status"),
+        Index("ix_inv_org_lead", "organization_id", "lead_id"),
+    )
     number = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     currency = Column(String, default="USD")

@@ -39,6 +39,16 @@ backend/.env
 # Uploaded static files
 backend/static/uploads/
 
+# Database files & SQLite logs
+*.db
+*.db-shm
+*.db-wal
+growthos.db*
+
+# Benchmark CSVs and temporary token files
+backend/*.csv
+backend/token.txt
+
 # Scratch / debug scripts
 backend/check_supabase.py
 backend/migrate_to_supabase.py

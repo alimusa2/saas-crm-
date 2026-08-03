@@ -17,3 +17,4 @@ from app.modules.integrations.models import Integration
 from app.modules.gmail.models import GmailIntegration, GmailSyncLog
 from app.modules.team.models import TeamMember, EmployeeActivityLog
 from app.modules.campaigns.models import Campaign, CampaignRecipient
+from app.modules.ai_coach.models import CoachSession, CoachMessage

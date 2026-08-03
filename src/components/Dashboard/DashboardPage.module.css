@@ -5,13 +5,14 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  padding: 4px;
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
   gap: 16px;
   width: 100%;
@@ -19,15 +20,16 @@
 }
 
 .greeting {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-main);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-main, #0f172a);
   margin-bottom: 4px;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #64748b);
 }
 
 .datePicker {
@@ -35,16 +37,23 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  background-color: var(--surface-color, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-main);
+  color: var(--text-main, #0f172a);
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
 }
 
-.statsRow {
+.datePicker:hover {
+  background-color: #f1f5f9;
+}
+
+/* 1. All Stat Cards Aligned in a Single Horizontal Line */
+.statsRowSingleLine {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
@@ -52,18 +61,22 @@
   box-sizing: border-box;
 }
 
-.gridRow {
+/* 2. Graphs Directly Below Stat Cards */
+.chartsRow {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
   width: 100%;
   box-sizing: border-box;
 }
 
-.colFlex {
-  display: flex;
-  flex-direction: column;
+/* 3. Lists Section Below Graphs */
+.listsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .fullRow {
@@ -71,21 +84,22 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 1600px) {
-  .statsRow {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .statsRowSingleLine {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1200px) {
-  .gridRow {
-    grid-template-columns: 1fr 1fr;
+  .statsRowSingleLine {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-}
-
-@media (max-width: 1024px) {
-  .statsRow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+  .listsRow {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -95,16 +109,19 @@
     gap: 16px;
     align-items: stretch;
   }
-  .gridRow {
+  .statsRowSingleLine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .listsRow {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 540px) {
-  .statsRow {
+  .statsRowSingleLine {
     grid-template-columns: 1fr;
   }
   .greeting {
-    font-size: 20px;
+    font-size: 22px;
   }
 }

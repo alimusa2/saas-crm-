@@ -17,7 +17,7 @@ def get_performance_service(db: AsyncSession = Depends(get_db)) -> PerformanceSe
 
 @router.get("/leaderboard")
 async def get_leaderboard(
-    sort_by: str = Query("revenue", regex="^(revenue|deals|conversion|meetings|tasks|rating)$"),
+    sort_by: str = Query("revenue", pattern="^(revenue|deals|conversion|meetings|tasks|rating)$"),
     svc: PerformanceService = Depends(get_performance_service),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
@@ -56,7 +56,7 @@ async def get_employee_performance(
 @router.get("/{member_id}/export")
 async def export_employee_report(
     member_id: str,
-    format: str = Query("csv", regex="^(csv|excel|pdf)$"),
+    format: str = Query("csv", pattern="^(csv|excel|pdf)$"),
     svc: PerformanceService = Depends(get_performance_service),
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
