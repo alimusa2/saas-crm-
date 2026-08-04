@@ -6,23 +6,21 @@ import {
 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
-  { label: '📞 Sales Pitch', prompt: 'Help me pitch my product to a customer who needs: ' },
   { label: '📧 Email Reply', prompt: 'Write a professional follow-up email for: ' },
-  { label: '📱 WhatsApp Reply', prompt: 'Draft a quick, friendly WhatsApp reply for: ' },
   { label: '❌ Handle Objection', prompt: 'Help me handle this customer objection: ' },
   { label: '🤝 Negotiation', prompt: 'Give me a negotiation strategy for: ' },
   { label: '🎯 Closing Tips', prompt: 'Suggest closing techniques for a deal where: ' },
   { label: '📅 Meeting Preparation', prompt: "What should I prepare for tomorrow's sales meeting with: " },
-  { label: '📞 Cold Calling', prompt: 'Give me an engaging cold call opening script for: ' },
   { label: '💼 Sales Strategy', prompt: 'Provide a high-converting sales strategy for: ' },
 ];
 
 const STARTER_CARDS = [
-  { icon: '📞', title: 'Cold Call Script', text: 'Draft an engaging cold call opener', prompt: 'Give me an engaging cold call opening script for: ' },
+  { icon: '🤝', title: 'Negotiation Strategy', text: 'Get proven strategies for deal negotiations', prompt: 'Give me a negotiation strategy for: ' },
   { icon: '❌', title: 'Handle Objection', text: 'Overcome pricing or hesitation objections', prompt: 'Help me handle this customer objection: ' },
   { icon: '📧', title: 'Follow-Up Email', text: 'Write a professional follow-up email', prompt: 'Write a professional follow-up email for: ' },
-  { icon: '🤝', title: 'Closing Strategy', text: 'Suggest closing techniques for a deal', prompt: 'Suggest closing techniques for a deal where: ' }
+  { icon: '🎯', title: 'Closing Strategy', text: 'Suggest closing techniques for a deal', prompt: 'Suggest closing techniques for a deal where: ' }
 ];
+
 
 export const AISalesCoachDrawer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
