@@ -42,9 +42,10 @@ export async function api<T = unknown>(
 
   const token = getToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(init.headers as Record<string, string> ?? {}),
   };
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -693,6 +694,7 @@ export type EmailSendRequest = {
   lead_id?: string;
   contact_id?: string;
   parent_id?: string;
+  attachments?: Array<{ filename: string; url: string; mime_type?: string; size?: number }>;
 };
 
 export const inboxApi = {
@@ -716,6 +718,14 @@ export const inboxApi = {
     api<Message>('/inbox/', { method: 'POST', body: JSON.stringify(data) }),
   sendEmail: (data: EmailSendRequest) =>
     api<Message>('/inbox/send-email', { method: 'POST', body: JSON.stringify(data) }),
+  uploadAttachment: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api<{ filename: string; url: string; mime_type: string; size: number }>('/inbox/upload-attachment', {
+      method: 'POST',
+      body: formData,
+    });
+  },
   markAsRead: (id: string) =>
     api<Message>(`/inbox/${id}/read`, { method: 'PATCH' }),
   linkMessage: (id: string, data: { lead_id?: string; contact_id?: string }) =>
@@ -725,6 +735,7 @@ export const inboxApi = {
   archiveMessage: (id: string) =>
     api<Message>(`/inbox/${id}/archive`, { method: 'PATCH' }),
 };
+
 
 // ─── Gmail Integration API ────────────────────────────────────────────────────
 export type GmailIntegration = {

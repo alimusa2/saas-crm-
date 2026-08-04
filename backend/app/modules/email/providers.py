@@ -70,15 +70,28 @@ class SMTPProvider(BaseEmailProvider):
 
             # Handle attachments
             if attachments:
+                import httpx, os
                 for att in attachments:
-                    part = MIMEBase("application", "octet-stream")
-                    part.set_payload(att["content"])
-                    encoders.encode_base64(part)
-                    part.add_header(
-                        "Content-Disposition",
-                        f'attachment; filename="{att["filename"]}"',
-                    )
-                    msg.attach(part)
+                    content = att.get("content")
+                    if not content and att.get("url"):
+                        att_url = att["url"]
+                        if att_url.startswith("http://") or att_url.startswith("https://"):
+                            r_att = httpx.get(att_url, timeout=15.0)
+                            if r_att.status_code == 200:
+                                content = r_att.content
+                        elif os.path.exists(att_url.lstrip("/")):
+                            with open(att_url.lstrip("/"), "rb") as f:
+                                content = f.read()
+                    if content:
+                        part = MIMEBase("application", "octet-stream")
+                        part.set_payload(content)
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            "Content-Disposition",
+                            f'attachment; filename="{att.get("filename", "attachment")}"',
+                        )
+                        msg.attach(part)
+
 
             # Build list of recipients
             recipients = [to_email]

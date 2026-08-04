@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
@@ -10,6 +10,7 @@ from app.modules.inbox.services import InboxService
 from app.modules.auth.models import User
 
 router = APIRouter()
+
 
 
 def get_inbox_service(db: AsyncSession = Depends(get_db)) -> InboxService:
@@ -100,6 +101,27 @@ async def send_email(
     except Exception:
         pass
     return msg
+
+
+@router.post("/upload-attachment")
+async def upload_reply_attachment(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload an attachment file to Cloudinary / storage for email replies."""
+    from app.utils.storage import StorageManager
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+
+    url = await StorageManager.upload_file(file)
+    return {
+        "filename": file.filename,
+        "url": url,
+        "mime_type": file.content_type or "application/octet-stream",
+        "size": size,
+    }
+
 
 
 @router.patch("/{message_id}/read", response_model=MessageResponse)

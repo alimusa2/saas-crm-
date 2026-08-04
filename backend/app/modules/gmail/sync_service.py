@@ -240,6 +240,24 @@ class GmailSyncService:
                     body_content = parse_gmail_body(payload)
                     attachments = parse_gmail_attachments(payload)
 
+                    # Process incoming attachments and upload to Cloudinary / Storage
+                    if attachments:
+                        from app.utils.storage import StorageManager
+                        gmail_svc = GmailService(self.db)
+                        for att in attachments:
+                            try:
+                                att_res = await gmail_svc.get_attachment_data(org_id, msg_id, att["id"])
+                                if att_res.get("success") and att_res.get("data_base64"):
+                                    raw_bytes = base64.urlsafe_b64decode(att_res["data_base64"].encode())
+                                    cloud_url = await StorageManager.upload_bytes(
+                                        raw_bytes,
+                                        att.get("filename", "file"),
+                                        att.get("mime_type", "application/octet-stream")
+                                    )
+                                    att["url"] = cloud_url
+                            except Exception as att_err:
+                                logger.error(f"Failed to upload incoming attachment {att.get('filename')} to Cloudinary: {att_err}")
+
                     # Match Contacts -> Leads -> Company Email
                     lead_id, contact_id, company_id, is_unknown_contact, is_ambiguous, assigned_user_id = await self.match_email_address(org_id, sender_email)
 
@@ -273,6 +291,7 @@ class GmailSyncService:
                         attachments_metadata=json.dumps(attachments) if attachments else None,
                         created_at=msg_timestamp
                     )
+
                     
                     # Route internal / team links
                     await InboxService.route_inbox_message(self.db, new_msg)

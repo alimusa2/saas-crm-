@@ -20,7 +20,9 @@ import {
   HelpCircle,
   ArrowLeft,
   Reply,
+  X,
 } from 'lucide-react';
+
 
 interface Thread {
   key: string;
@@ -58,6 +60,33 @@ export const InboxPage = () => {
   const [replyType, setReplyType] = useState<'Email' | 'Internal'>('Email');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [replyAttachments, setReplyAttachments] = useState<Array<{ filename: string; url: string; mime_type: string; size: number }>>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReplyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingAttachment(true);
+    setSendError(null);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const res = await inboxApi.uploadAttachment(file);
+        setReplyAttachments(prev => [...prev, res]);
+      }
+    } catch (err: any) {
+      setSendError(err.message || 'Failed to upload attachment');
+    } finally {
+      setUploadingAttachment(false);
+      if (replyFileInputRef.current) replyFileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveReplyAttachment = (index: number) => {
+    setReplyAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
 
   // New thread compose inputs
   const [newRecipientType, setNewRecipientType] = useState<'Lead' | 'Contact' | 'Internal'>('Lead');
@@ -527,6 +556,7 @@ export const InboxPage = () => {
           lead_id: activeThread.type === 'Lead' ? activeThread.id : undefined,
           contact_id: activeThread.type === 'Contact' ? activeThread.id : undefined,
           parent_id: activeThread.lastMessage.id,
+          attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
         });
       } else {
         // Send Internal log
@@ -542,12 +572,15 @@ export const InboxPage = () => {
           delivery_status: 'Sent',
           sender_email: gmailStatus?.gmail_address || 'me@growthos.com',
           recipient_email: activeThread.email || 'me@growthos.com',
+          attachments_metadata: replyAttachments.length > 0 ? JSON.stringify(replyAttachments) : undefined,
         });
       }
 
       setMessages(prev => [newMsg, ...prev]);
       setReplyBody('');
+      setReplyAttachments([]);
       setShowReplyForm(false);
+
     } catch (err: any) {
       setSendError(err.message || 'Failed to send message.');
     } finally {
@@ -1071,7 +1104,13 @@ export const InboxPage = () => {
                                     </div>
                                     <button
                                       type="button"
-                                      onClick={() => handleDownloadAttachment(msg.gmail_message_id || msg.id, att.id, att.filename)}
+                                      onClick={() => {
+                                        if (att.url) {
+                                          window.open(att.url, '_blank', 'noopener,noreferrer');
+                                        } else {
+                                          handleDownloadAttachment(msg.gmail_message_id || msg.id, att.id, att.filename);
+                                        }
+                                      }}
                                       style={{
                                         background: 'var(--primary-color)',
                                         color: 'white',
@@ -1086,8 +1125,10 @@ export const InboxPage = () => {
                                         gap: 4,
                                       }}
                                     >
-                                      <Download size={11} /> Download
+                                      {att.url ? <ExternalLink size={11} /> : <Download size={11} />}
+                                      {att.url ? 'View Attachment' : 'Download'}
                                     </button>
+
                                   </div>
                                 ))}
                               </div>
@@ -1211,6 +1252,14 @@ export const InboxPage = () => {
                     </div>
                   )}
 
+                  <input
+                    type="file"
+                    ref={replyFileInputRef}
+                    multiple
+                    onChange={handleReplyFileChange}
+                    style={{ display: 'none' }}
+                  />
+
                   <div className={styles.replyInputGroup}>
                     {replyType === 'Email' && (
                       <input
@@ -1229,10 +1278,56 @@ export const InboxPage = () => {
                       value={replyBody}
                       onChange={e => setReplyBody(e.target.value)}
                     />
+                    
+                    {replyAttachments.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8, padding: '4px 0' }}>
+                        {replyAttachments.map((att, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: 6,
+                              padding: '4px 8px',
+                              fontSize: 12,
+                            }}
+                          >
+                            <Paperclip size={12} style={{ color: '#64748b' }} />
+                            <span style={{ fontWeight: 600, color: '#334155', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {att.filename}
+                            </span>
+                            <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                              ({(att.size / 1024).toFixed(1)} KB)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveReplyAttachment(idx)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0, display: 'flex', alignItems: 'center' }}
+                              title="Remove attachment"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.replyActions}>
                     {sendError && <span className={styles.errorText}>{sendError}</span>}
+                    <button
+                      type="button"
+                      className={styles.cancelBtn}
+                      onClick={() => replyFileInputRef.current?.click()}
+                      disabled={uploadingAttachment}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      {uploadingAttachment ? <Loader size={14} className="spin" /> : <Paperclip size={14} />}
+                      {uploadingAttachment ? 'Uploading…' : 'Attach File'}
+                    </button>
                     <button
                       type="button"
                       className={styles.cancelBtn}
@@ -1243,12 +1338,13 @@ export const InboxPage = () => {
                     <button
                       type="submit"
                       className={styles.sendBtn}
-                      disabled={sending}
+                      disabled={sending || uploadingAttachment}
                     >
                       <Send size={14} />
                       {sending ? 'Sending…' : 'Send'}
                     </button>
                   </div>
+
                 </form>
               </div>
             )}

@@ -14,7 +14,8 @@ import json
 import os
 from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
-from typing import Optional
+from typing import Optional, List, Dict, Any
+
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -306,10 +307,11 @@ class GmailService:
         thread_id: Optional[str] = None,
         in_reply_to: Optional[str] = None,
         references: Optional[str] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> dict:
         """
         Send an email via the Gmail API using the org's OAuth credentials.
-        Supports threadId and In-Reply-To/References headers for thread continuity.
+        Supports threadId, In-Reply-To/References headers, and file attachments.
         Returns a dict with success, gmail_message_id, gmail_thread_id, and error fields.
         """
         record = await self._get_or_create(organization_id)
@@ -335,15 +337,52 @@ class GmailService:
         # Real Gmail API send
         try:
             import httpx
-            # Build RFC 2822 message
-            mime_msg = MIMEText(body, "plain")
-            mime_msg["to"] = to_email
-            mime_msg["from"] = record.gmail_address
-            mime_msg["subject"] = subject
-            if in_reply_to:
-                mime_msg["In-Reply-To"] = in_reply_to
-            if references:
-                mime_msg["References"] = references
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.base import MIMEBase
+            from email import encoders
+
+            if attachments:
+                mime_msg = MIMEMultipart("mixed")
+                mime_msg.attach(MIMEText(body, "plain"))
+                mime_msg["to"] = to_email
+                mime_msg["from"] = record.gmail_address
+                mime_msg["subject"] = subject
+                if in_reply_to:
+                    mime_msg["In-Reply-To"] = in_reply_to
+                if references:
+                    mime_msg["References"] = references
+
+                for att in attachments:
+                    att_url = att.get("url")
+                    att_filename = att.get("filename") or "attachment"
+                    file_data = None
+                    if att_url:
+                        if att_url.startswith("http://") or att_url.startswith("https://"):
+                            r_att = httpx.get(att_url, timeout=15.0)
+                            if r_att.status_code == 200:
+                                file_data = r_att.content
+                        elif os.path.exists(att_url.lstrip("/")):
+                            with open(att_url.lstrip("/"), "rb") as f:
+                                file_data = f.read()
+
+                    if file_data:
+                        part = MIMEBase("application", "octet-stream")
+                        part.set_payload(file_data)
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            "Content-Disposition",
+                            f'attachment; filename="{att_filename}"',
+                        )
+                        mime_msg.attach(part)
+            else:
+                mime_msg = MIMEText(body, "plain")
+                mime_msg["to"] = to_email
+                mime_msg["from"] = record.gmail_address
+                mime_msg["subject"] = subject
+                if in_reply_to:
+                    mime_msg["In-Reply-To"] = in_reply_to
+                if references:
+                    mime_msg["References"] = references
 
             raw = base64.urlsafe_b64encode(mime_msg.as_bytes()).decode()
 
@@ -372,6 +411,7 @@ class GmailService:
             }
         except Exception as exc:
             return {"success": False, "error": str(exc)}
+
 
     async def get_attachment_data(
         self,

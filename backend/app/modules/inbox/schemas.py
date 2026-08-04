@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 
@@ -19,16 +19,19 @@ class MessageCreate(BaseModel):
     appointment_id: Optional[str] = None
     invoice_id: Optional[str] = None
     automation_source: Optional[str] = None
+    attachments_metadata: Optional[str] = None
 
 
 class EmailSendRequest(BaseModel):
-    """Send an email via Gmail API (requires Gmail OAuth connection)."""
+    """Send an email via Gmail API or SMTP provider."""
     to_email: str
     subject: str
     body: str
     lead_id: Optional[str] = None
     contact_id: Optional[str] = None
     parent_id: Optional[str] = None
+    attachments: Optional[List[Dict[str, Any]]] = None
+
 
 
 class MessageResponse(BaseModel):

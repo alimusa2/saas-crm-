@@ -260,6 +260,7 @@ class InboxService:
                 parent_thread_id = p_msg.gmail_thread_id
 
         # Create Message in 'Sending' status first
+        attachments_json = json.dumps(req.attachments) if req.attachments else None
         msg = Message(
             body=req.body,
             subject=req.subject,
@@ -274,6 +275,7 @@ class InboxService:
             sender_email=sender_crm_email,
             recipient_email=req.to_email,
             organization_id=organization_id,
+            attachments_metadata=attachments_json,
         )
         await InboxService.route_inbox_message(self.db, msg)
         self.db.add(msg)
@@ -328,6 +330,7 @@ class InboxService:
                     subject=msg.subject or "Outbound Message",
                     body=msg.body,
                     thread_id=msg.gmail_thread_id,
+                    attachments=req.attachments,
                 )
             else:
                 provider = EmailProviderRegistry.get_provider(
@@ -344,8 +347,9 @@ class InboxService:
                     bcc=None,
                     reply_to=None,
                     html_body=None,
-                    attachments=None,
+                    attachments=req.attachments,
                 )
+
 
             if res_send.get("success"):
                 msg.delivery_status = "Sent"
