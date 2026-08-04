@@ -24,8 +24,17 @@ class CoachSessionService:
         return session
 
     async def list_user_sessions(self, user_id: str, org_id: str) -> List[dict]:
+        # Single query with a correlated count subquery instead of one
+        # extra round trip per session (was N+1: fine at 10 sessions,
+        # slow at scale).
+        msg_count_subq = (
+            select(func.count(CoachMessage.id))
+            .where(CoachMessage.session_id == CoachSession.id)
+            .correlate(CoachSession)
+            .scalar_subquery()
+        )
         stmt = (
-            select(CoachSession)
+            select(CoachSession, msg_count_subq.label("message_count"))
             .where(
                 CoachSession.user_id == user_id,
                 CoachSession.organization_id == org_id,
@@ -34,14 +43,10 @@ class CoachSessionService:
             .order_by(CoachSession.updated_at.desc())
         )
         res = await self.db.execute(stmt)
-        sessions = list(res.scalars().all())
+        rows = res.all()
 
         result = []
-        for s in sessions:
-            msg_count_stmt = select(func.count(CoachMessage.id)).where(CoachMessage.session_id == s.id)
-            count_res = await self.db.execute(msg_count_stmt)
-            msg_count = count_res.scalar() or 0
-
+        for s, msg_count in rows:
             result.append({
                 "id": s.id,
                 "organization_id": s.organization_id,
@@ -50,16 +55,27 @@ class CoachSessionService:
                 "is_archived": s.is_archived,
                 "created_at": s.created_at,
                 "updated_at": s.updated_at,
-                "message_count": msg_count,
+                "message_count": msg_count or 0,
                 "messages": []
             })
         return result
 
     async def get_session_by_id(self, session_id: str, user_id: str, org_id: str) -> CoachSession:
+        # Ownership is enforced IN the query (not after fetching) so that a
+        # session that doesn't exist and a session that exists but belongs to
+        # someone else are indistinguishable to the caller — both 404.
+        # Previously the fetch ignored user_id/org_id and only checked
+        # ownership afterward, returning 403 vs 404 differently and letting
+        # an attacker enumerate valid session IDs belonging to other
+        # users/orgs by watching which status code came back.
         stmt = (
             select(CoachSession)
             .options(selectinload(CoachSession.messages))
-            .where(CoachSession.id == session_id)
+            .where(
+                CoachSession.id == session_id,
+                CoachSession.user_id == user_id,
+                CoachSession.organization_id == org_id,
+            )
             .execution_options(populate_existing=True)
         )
         res = await self.db.execute(stmt)
@@ -69,13 +85,6 @@ class CoachSessionService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Coach session not found."
-            )
-
-        # Multi-tenant and strict User-level privacy enforcement
-        if session.user_id != user_id or session.organization_id != org_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Forbidden: You do not have access to this coach session."
             )
 
         return session
@@ -113,3 +122,18 @@ class CoachSessionService:
         await self.db.commit()
         await self.db.refresh(session)
         return session
+
+    async def clear_all_user_sessions(self, user_id: str, org_id: str):
+        stmt = (
+            select(CoachSession)
+            .where(
+                CoachSession.user_id == user_id,
+                CoachSession.organization_id == org_id
+            )
+        )
+        res = await self.db.execute(stmt)
+        sessions = res.scalars().all()
+        for s in sessions:
+            await self.db.delete(s)
+        await self.db.commit()
+

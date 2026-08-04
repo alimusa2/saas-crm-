@@ -1,5 +1,3 @@
-import os
-import httpx
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -9,9 +7,11 @@ from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.core.security import get_current_user
+from app.core.ai.llm_chain import execute_llm_chain  # shared, fixed provider fallback chain
 from app.modules.ai_coach.schemas import (
     CoachSessionCreate, CoachSessionUpdate, CoachSessionResponse,
-    CoachMessageCreate, CoachMessageResponse
+    CoachMessageCreate, CoachMessageResponse,
+    StatelessChatRequest, StatelessChatResponse
 )
 from app.modules.ai_coach.services import CoachSessionService
 from app.modules.ai_coach.models import CoachSession, CoachMessage
@@ -253,112 +253,24 @@ To give you the most effective script and strategy, focus on the buyer's primary
 **Follow-up Question:** Could you share a quick detail about what product you're selling or who your prospect is? I'll write the exact script for you!"""
 
 # ─── LLM Provider Callers ──────────────────────────────────────────────────
+# NOTE: the individual Groq/Gemini/OpenRouter callers used to be duplicated
+# here with several bugs (2-2.5s timeouts causing real calls to spuriously
+# time out, inconsistent error handling between providers, Gemini's system
+# prompt faked as a chat turn instead of using `systemInstruction`). That
+# logic now lives once, fixed, in app/core/ai/llm_chain.py and is shared with
+# the AI Lead Handler feature so both stay in sync.
 
-async def call_gemini_api(api_key: str, message: str, history: List[dict]) -> Optional[str]:
-    models_to_try = [
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-    ]
-    contents = [
-        {"role": "user", "parts": [{"text": SYSTEM_PROMPT}]},
-        {"role": "model", "parts": [{"text": "Understood. I am Coach, your dedicated AI Sales Coach built into GrowthOS CRM."}]}
-    ]
-    for h in history[-20:]:  # Option (a): Cap to last 20 messages
-        role = "user" if h["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": h["content"]}]})
-    contents.append({"role": "user", "parts": [{"text": message}]})
-
-    async with httpx.AsyncClient(timeout=2.0) as client:
-        for model_url in models_to_try:
-            try:
-                resp = await client.post(f"{model_url}?key={api_key}", json={"contents": contents})
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                elif resp.status_code in (400, 401, 403):
-                    break
-            except Exception as e:
-                logger.warning(f"Gemini API call failed: {e}")
-    return None
-
-async def call_groq_api(api_key: str, message: str, history: List[dict]) -> Optional[str]:
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for h in history[-20:]:  # Option (a): Cap to last 20 messages
-            role = "user" if h["role"] == "user" else "assistant"
-            messages.append({"role": role, "content": h["content"]})
-        messages.append({"role": "user", "content": message})
-
-        async with httpx.AsyncClient(timeout=2.5) as client:
-            resp = await client.post(
-                url,
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={"model": "llama-3.3-70b-versatile", "messages": messages, "temperature": 0.7}
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        logger.warning(f"Groq API call failed: {e}")
-    return None
-
-async def call_openrouter_api(api_key: str, message: str, history: List[dict]) -> Optional[str]:
-    try:
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for h in history[-20:]:  # Option (a): Cap to last 20 messages
-            role = "user" if h["role"] == "user" else "assistant"
-            messages.append({"role": role, "content": h["content"]})
-        messages.append({"role": "user", "content": message})
-
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            for model_name in ["meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"]:
-                try:
-                    resp = await client.post(
-                        url,
-                        headers={
-                            "Authorization": f"Bearer {api_key}",
-                            "Content-Type": "application/json",
-                            "HTTP-Referer": "http://localhost:8000",
-                            "X-Title": "GrowthOS CRM Coach"
-                        },
-                        json={"model": model_name, "messages": messages, "temperature": 0.7}
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        return data["choices"][0]["message"]["content"]
-                except Exception:
-                    pass
-    except Exception as e:
-        logger.warning(f"OpenRouter API call failed: {e}")
-    return None
-
-async def execute_llm_chain(message: str, history: List[dict]) -> tuple[str, str]:
-    # 1. Groq (High performance, ultra-fast sub-second latency)
-    groq_key = os.getenv("GROQ_API_KEY")
-    if groq_key and groq_key.startswith("gsk_"):
-        reply = await call_groq_api(groq_key, message, history)
-        if reply:
-            return reply, "Groq AI (Llama 3.3)"
-
-    # 2. Gemini 2.0 / 1.5 Flash
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and not gemini_key.startswith("AQ."):
-        reply = await call_gemini_api(gemini_key, message, history)
-        if reply:
-            return reply, "Gemini 2.0 Flash"
-
-    # 3. OpenRouter
-    openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    if openrouter_key:
-        reply = await call_openrouter_api(openrouter_key, message, history)
-        if reply:
-            return reply, "OpenRouter AI"
-
-    # 4. Fallback Embedded Coach Engine
-    reply = generate_embedded_sales_advice(message, history)
-    return reply, "GrowthOS Coach Engine"
+async def run_coach_llm_chain(message: str, history: List[dict]) -> tuple[str, str]:
+    """Thin wrapper: Coach-specific system prompt + shared fallback chain."""
+    result = await execute_llm_chain(
+        system_prompt=SYSTEM_PROMPT,
+        message=message,
+        history=history,
+        fallback_fn=generate_embedded_sales_advice,
+    )
+    if result.provider_used == "Fallback Engine":
+        logger.warning(f"Coach message served by deterministic fallback engine. Attempts: {result.attempts}")
+    return result.reply, result.provider_used
 
 # ─── API Endpoints ─────────────────────────────────────────────────────────
 
@@ -366,6 +278,20 @@ def get_user_and_org(current_user: dict) -> tuple[str, str]:
     user_id = current_user.get("id") or current_user.get("sub") or current_user.get("user_id") or "system"
     org_id = current_user.get("org") or current_user.get("organization_id") or "default"
     return user_id, org_id
+
+@router.post("/chat", response_model=StatelessChatResponse)
+async def stateless_chat(
+    payload: StatelessChatRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Stateless ephemeral chat: runs LLM chain with provided message + in-memory history without DB storage."""
+    text = payload.message.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message content cannot be empty.")
+    
+    history_list = [{"role": h.role, "content": h.content} for h in (payload.history or [])]
+    reply, provider = await run_coach_llm_chain(text, history_list)
+    return StatelessChatResponse(reply=reply, provider_used=provider)
 
 @router.post("/sessions", response_model=CoachSessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
@@ -441,9 +367,12 @@ async def send_session_message(
 ):
     """Send user message, run LLM with prior history, save assistant reply & return it."""
     user_id, org_id = get_user_and_org(current_user)
+
     text = payload.content.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Message content cannot be empty.")
+    if len(text) > 4000:
+        raise HTTPException(status_code=400, detail="Message content is too long (max 4000 characters).")
 
     svc = CoachSessionService(db)
     session = await svc.get_session_by_id(session_id, user_id, org_id)
@@ -458,7 +387,7 @@ async def send_session_message(
     ]
 
     # 3. Execute LLM call
-    reply, provider_used = await execute_llm_chain(text, history)
+    reply, provider_used = await run_coach_llm_chain(text, history)
 
     # 4. Save assistant reply
     assistant_msg = await svc.add_message(session, "assistant", reply)
@@ -470,6 +399,17 @@ async def send_session_message(
         "content": assistant_msg.content,
         "created_at": assistant_msg.created_at
     }
+
+@router.delete("/sessions/clear-all")
+async def clear_all_sessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete all session chats for the current user."""
+    user_id, org_id = get_user_and_org(current_user)
+    svc = CoachSessionService(db)
+    await svc.clear_all_user_sessions(user_id, org_id)
+    return {"status": "success", "message": "All session chats deleted."}
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(
@@ -483,6 +423,7 @@ async def delete_session(
     session = await svc.get_session_by_id(session_id, user_id, org_id)
     await svc.archive_session(session)
     return {"status": "success", "message": "Session archived."}
+
 
 @router.patch("/sessions/{session_id}", response_model=CoachSessionResponse)
 async def update_session(

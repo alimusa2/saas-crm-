@@ -23,6 +23,13 @@ export interface CoachSession {
 }
 
 export const aiCoachApi = {
+  sendStatelessMessage: async (message: string, history: Array<{ role: string; content: string }>): Promise<{ reply: string; provider_used: string }> => {
+    return api<{ reply: string; provider_used: string }>('/ai-coach/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history })
+    });
+  },
+
   // Session Endpoints
   createSession: async (title?: string): Promise<CoachSession> => {
     return api<CoachSession>('/ai-coach/sessions', {
@@ -55,6 +62,13 @@ export const aiCoachApi = {
       method: 'DELETE'
     });
   },
+
+  clearAllSessions: async (): Promise<{ status: string }> => {
+    return api<{ status: string }>('/ai-coach/sessions/clear-all', {
+      method: 'DELETE'
+    });
+  },
+
 
   updateSessionTitle: async (sessionId: string, title: string): Promise<CoachSession> => {
     return api<CoachSession>(`/ai-coach/sessions/${sessionId}`, {

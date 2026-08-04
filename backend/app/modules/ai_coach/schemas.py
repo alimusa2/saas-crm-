@@ -35,3 +35,16 @@ class CoachSessionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class StatelessChatMessage(BaseModel):
+    role: str
+    content: str
+
+class StatelessChatRequest(BaseModel):
+    message: str
+    history: Optional[List[StatelessChatMessage]] = []
+
+class StatelessChatResponse(BaseModel):
+    reply: str
+    provider_used: str
+

@@ -17,6 +17,13 @@ const QUICK_ACTIONS = [
   { label: '💼 Sales Strategy', prompt: 'Provide a high-converting sales strategy for: ' },
 ];
 
+const STARTER_CARDS = [
+  { icon: '📞', title: 'Cold Call Script', text: 'Draft an engaging cold call opener', prompt: 'Give me an engaging cold call opening script for: ' },
+  { icon: '❌', title: 'Handle Objection', text: 'Overcome pricing or hesitation objections', prompt: 'Help me handle this customer objection: ' },
+  { icon: '📧', title: 'Follow-Up Email', text: 'Write a professional follow-up email', prompt: 'Write a professional follow-up email for: ' },
+  { icon: '🤝', title: 'Closing Strategy', text: 'Suggest closing techniques for a deal', prompt: 'Suggest closing techniques for a deal where: ' }
+];
+
 export const AISalesCoachDrawer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -34,102 +41,23 @@ export const AISalesCoachDrawer: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // 1. Fetch user's persistent practice sessions when drawer opens
-  useEffect(() => {
-    if (isOpen) {
-      loadSessions();
-    }
-  }, [isOpen]);
-
-  // 2. Fetch full message history when active session changes
-  useEffect(() => {
-    if (activeSessionId) {
-      loadSessionDetail(activeSessionId);
-    } else {
-      setMessages([]);
-    }
-  }, [activeSessionId]);
-
   useEffect(() => {
     if (isOpen && !isMinimized) {
       scrollToBottom();
     }
   }, [messages, isOpen, isMinimized, loading]);
 
-  const loadSessions = async () => {
-    try {
-      const data = await aiCoachApi.listSessions();
-      setSessions(data || []);
-      if (data && data.length > 0 && !activeSessionId) {
-        setActiveSessionId(data[0].id);
-      } else if (!data || data.length === 0) {
-        // Auto-create initial session if none exists
-        handleCreateNewSession();
-      }
-    } catch (err) {
-      console.warn('Failed to load Coach sessions from server:', err);
-    }
+  const handleCreateNewSession = () => {
+    setMessages([]);
   };
 
-  const loadSessionDetail = async (sessId: string) => {
-    try {
-      const detail = await aiCoachApi.getSessionDetail(sessId);
-      if (detail && detail.messages) {
-        setMessages(detail.messages);
-      } else {
-        setMessages([]);
-      }
-    } catch (err) {
-      console.warn(`Failed to fetch session detail for ${sessId}:`, err);
-      setMessages([]);
-    }
-  };
-
-  const handleCreateNewSession = async () => {
-    try {
-      const newSess = await aiCoachApi.createSession('New Sales Practice');
-      setSessions(prev => [newSess, ...prev]);
-      setActiveSessionId(newSess.id);
-      setMessages([]);
-    } catch (err) {
-      console.error('Failed to create new Coach session:', err);
-    }
-  };
-
-  const handleDeleteSession = async () => {
-    if (!activeSessionId) return;
-    if (window.confirm('Are you sure you want to delete this sales practice session?')) {
-      try {
-        await aiCoachApi.deleteSession(activeSessionId);
-        const remaining = sessions.filter(s => s.id !== activeSessionId);
-        setSessions(remaining);
-        if (remaining.length > 0) {
-          setActiveSessionId(remaining[0].id);
-        } else {
-          setActiveSessionId(null);
-          handleCreateNewSession();
-        }
-      } catch (err) {
-        console.error('Failed to delete session:', err);
-      }
-    }
+  const handleDeleteSession = () => {
+    setMessages([]);
   };
 
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || inputMsg).trim();
     if (!text || loading) return;
-
-    let targetSessionId = activeSessionId;
-    if (!targetSessionId) {
-      try {
-        const created = await aiCoachApi.createSession();
-        targetSessionId = created.id;
-        setActiveSessionId(created.id);
-        setSessions(prev => [created, ...prev]);
-      } catch (e) {
-        console.error('Failed to auto-create session:', e);
-      }
-    }
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -137,19 +65,22 @@ export const AISalesCoachDrawer: React.FC = () => {
       created_at: new Date().toISOString()
     };
 
+    const currentHistory = messages.map(m => ({ role: m.role, content: m.content }));
     setMessages(prev => [...prev, userMessage]);
     setInputMsg('');
     setLoading(true);
 
     try {
-      if (targetSessionId) {
-        const assistantMsg = await aiCoachApi.sendMessageToSession(targetSessionId, text);
-        setMessages(prev => [...prev, assistantMsg]);
-        // Refresh session list to update title / updated_at
-        loadSessions();
-      }
+      const res = await aiCoachApi.sendStatelessMessage(text, currentHistory);
+      const assistantMsg: ChatMessage = {
+        role: 'assistant',
+        content: res.reply,
+        provider_used: res.provider_used,
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, assistantMsg]);
     } catch (err) {
-      console.error('Failed to send message to session:', err);
+      console.error('Failed to send stateless message:', err);
     } finally {
       setLoading(false);
     }
@@ -168,35 +99,45 @@ export const AISalesCoachDrawer: React.FC = () => {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const parseInlineBold = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+        return <strong key={i} style={{ fontWeight: 700 }}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   const renderFormattedContent = (content: string) => {
     const lines = content.split('\n');
     return lines.map((line, idx) => {
       const trimmed = line.trim();
       if (trimmed.startsWith('### ')) {
-        return <h3 key={idx} style={{ fontSize: '15px', fontWeight: 800, margin: '10px 0 4px 0', color: '#1E293B' }}>{trimmed.replace('### ', '')}</h3>;
+        return <h3 key={idx} style={{ fontSize: '15px', fontWeight: 800, margin: '10px 0 4px 0', color: '#1E293B' }}>{parseInlineBold(trimmed.replace('### ', ''))}</h3>;
       }
       if (trimmed.startsWith('#### ')) {
-        return <h4 key={idx} style={{ fontSize: '13.5px', fontWeight: 700, margin: '8px 0 4px 0', color: '#334155' }}>{trimmed.replace('#### ', '')}</h4>;
+        return <h4 key={idx} style={{ fontSize: '13.5px', fontWeight: 700, margin: '8px 0 4px 0', color: '#334155' }}>{parseInlineBold(trimmed.replace('#### ', ''))}</h4>;
       }
       if (trimmed.startsWith('> ')) {
         return (
           <blockquote key={idx} style={{ margin: '6px 0', padding: '8px 12px', background: '#FFFFFF', borderLeft: '3px solid #6366F1', borderRadius: '4px', fontSize: '13px', fontStyle: 'italic', color: '#1E293B', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-            {trimmed.replace('> ', '')}
+            {parseInlineBold(trimmed.replace('> ', ''))}
           </blockquote>
         );
       }
       if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        return <li key={idx} style={{ marginLeft: '16px', marginBottom: '3px' }}>{trimmed.substring(2)}</li>;
+        return <li key={idx} style={{ marginLeft: '16px', marginBottom: '3px' }}>{parseInlineBold(trimmed.substring(2))}</li>;
       }
       if (/^\d+\.\s/.test(trimmed)) {
-        return <div key={idx} style={{ marginLeft: '6px', fontWeight: 500, marginBottom: '3px' }}>{trimmed}</div>;
+        return <div key={idx} style={{ marginLeft: '6px', fontWeight: 500, marginBottom: '3px' }}>{parseInlineBold(trimmed)}</div>;
       }
       if (trimmed === '---') {
         return <hr key={idx} style={{ border: 'none', borderTop: '1px solid #E2E8F0', margin: '10px 0' }} />;
       }
       if (!trimmed) return <div key={idx} style={{ height: '4px' }} />;
 
-      return <p key={idx} style={{ margin: '3px 0' }}>{line}</p>;
+      return <p key={idx} style={{ margin: '3px 0' }}>{parseInlineBold(line)}</p>;
     });
   };
 
@@ -211,10 +152,9 @@ export const AISalesCoachDrawer: React.FC = () => {
           title="Open AI Sales Coach"
         >
           <div className={styles.floatingIcon}>
-            <Sparkles size={18} />
+            <Sparkles size={22} />
           </div>
-          <span>AI Sales Coach</span>
-          <span className={styles.badge}>Live</span>
+          <span className={styles.liveDot} title="AI Coach Active" />
         </button>
       )}
 
@@ -226,8 +166,10 @@ export const AISalesCoachDrawer: React.FC = () => {
           onClick={() => setIsMinimized(false)}
           title="Expand AI Sales Coach"
         >
-          <Sparkles size={18} />
-          <span>AI Sales Coach (Minimized)</span>
+          <div className={styles.floatingIcon}>
+            <Sparkles size={22} />
+          </div>
+          <span className={styles.liveDot} title="AI Coach Active" />
         </button>
       )}
 
@@ -280,29 +222,6 @@ export const AISalesCoachDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Persistent Practice Sessions Bar */}
-        <div className={styles.sessionsBar}>
-          <select
-            className={styles.sessionSelect}
-            value={activeSessionId || ''}
-            onChange={e => setActiveSessionId(e.target.value)}
-          >
-            {sessions.map(s => (
-              <option key={s.id} value={s.id}>
-                💬 {s.title || 'Sales Practice Session'} ({s.message_count || 0} msgs)
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={styles.newSessionBtn}
-            onClick={handleCreateNewSession}
-            title="Start a new practice session"
-          >
-            <Plus size={14} /> New Session
-          </button>
-        </div>
-
         {/* Quick Action Pills */}
         <div className={styles.quickActionsContainer}>
           <div className={styles.quickActionsWrapper}>
@@ -323,13 +242,34 @@ export const AISalesCoachDrawer: React.FC = () => {
         <div className={styles.messagesArea}>
           {messages.length === 0 ? (
             <div className={styles.emptyState}>
-              <div className={styles.emptyStateIcon}>
-                <Sparkles size={28} />
+              <div className={styles.emptyStateHeader}>
+                <div className={styles.emptyStateIcon}>
+                  <Sparkles size={24} />
+                </div>
+                <div>
+                  <h4 className={styles.emptyStateTitle}>Welcome to AI Sales Coach! 👋</h4>
+                  <p className={styles.emptyStateText}>
+                    I'm your 24/7 sales strategist. Select a quick starter prompt below or ask any question to get started.
+                  </p>
+                </div>
               </div>
-              <h4 className={styles.emptyStateTitle}>Welcome to AI Sales Coach! 👋</h4>
-              <p className={styles.emptyStateText}>
-                I am your 24/7 dedicated sales strategist. Ask me to role-play a sales call, handle pricing objections, review a pitch script, or draft a follow-up email.
-              </p>
+
+              <div className={styles.starterGrid}>
+                {STARTER_CARDS.map((card, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={styles.starterCard}
+                    onClick={() => handleQuickAction(card.prompt)}
+                  >
+                    <span className={styles.starterIcon}>{card.icon}</span>
+                    <div className={styles.starterContent}>
+                      <div className={styles.starterTitle}>{card.title}</div>
+                      <div className={styles.starterDesc}>{card.text}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((msg, idx) => {

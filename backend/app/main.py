@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -37,6 +41,8 @@ async def lifespan(app: FastAPI):
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
 
         async def _get_cols(c, t_name: str):
             if c.dialect.name == "sqlite":
@@ -422,6 +428,8 @@ async def lifespan(app: FastAPI):
     gmail_sync_task.cancel()
 
 
+
+
 app = FastAPI(
     title="GrowthOS Backend",
     description="AI Powered CRM & Sales Automation Platform API",
@@ -485,6 +493,8 @@ app.include_router(team_router, prefix="/api/v1/team", tags=["team"])
 app.include_router(campaigns_router, prefix="/api/v1/campaigns", tags=["campaigns"])
 from app.modules.ai_coach.router import router as ai_coach_router
 app.include_router(ai_coach_router, prefix="/api/v1/ai-coach", tags=["ai-coach"])
+from app.modules.ai_lead_handler.router import router as ai_lead_handler_router
+app.include_router(ai_lead_handler_router, prefix="/api/v1", tags=["ai-lead-handler"])
 from app.modules.websocket.router import router as ws_router
 app.include_router(ws_router, tags=["websocket"])
 
