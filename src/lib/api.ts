@@ -52,8 +52,8 @@ export async function api<T = unknown>(
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    controller.abort(new Error('API request timed out after 30 seconds'));
-  }, 30000);
+    controller.abort(new Error('API request timed out after 10 seconds'));
+  }, 10000);
 
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
@@ -118,6 +118,11 @@ export type Lead = {
   score_last_updated?: string;
   company_id?: string;
   owner_id?: string;
+  notes?: string;
+  assigned_to?: { id?: string; name?: string; email?: string } | any;
+  assigned_to_id?: string;
+  billing_address?: string;
+  tax_information?: string;
 };
 
 export type RelatedLeadSummary = {
@@ -632,6 +637,11 @@ export type Contact = {
   organization_id: string;
   created_at: string;
   updated_at: string;
+  notes?: string;
+  assigned_to?: { id?: string; name?: string; email?: string } | any;
+  assigned_to_id?: string;
+  billing_address?: string;
+  tax_information?: string;
 };
 
 export const contactsApi = {

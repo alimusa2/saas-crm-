@@ -25,6 +25,7 @@ dist-ssr
 
 # Python virtual environment
 backend/venv/
+backend/site-packages/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/**/*.pyc

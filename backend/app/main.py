@@ -437,20 +437,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow CORS for local frontend dev server and any localhost port
+# Allow CORS for local frontend dev server, FRONTEND_URL env var, and Render domains
+frontend_url = os.getenv("FRONTEND_URL")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-    ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https?://.*\.onrender\.com|https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -462,6 +467,14 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 from app.modules.health.router import router as health_router
+
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "message": "GrowthOS Backend API is running",
+        "docs": "http://127.0.0.1:8000/docs"
+    }
 
 app.include_router(health_router, prefix="", tags=["health"])
 app.include_router(health_router, prefix="/api/v1", tags=["health"])

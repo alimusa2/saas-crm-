@@ -79,7 +79,13 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         import os
-        return os.getenv("DATABASE_URL", self.DATABASE_URL)
+        url = os.getenv("DATABASE_URL", self.DATABASE_URL)
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
 
 
     class Config:
