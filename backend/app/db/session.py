@@ -28,12 +28,17 @@ engine = create_async_engine(
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     if engine.dialect.name == "sqlite":
+        # PythonAnywhere network storage does not support WAL mode mmap shared memory
+        is_pa = os.getenv("PYTHONANYWHERE_SITE") or "wsgi" in os.getenv("SERVER_SOFTWARE", "").lower()
         cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
+        if not is_pa:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA mmap_size=268435456")
+        else:
+            cursor.execute("PRAGMA journal_mode=DELETE")
         cursor.execute("PRAGMA cache_size=-64000")
         cursor.execute("PRAGMA temp_store=MEMORY")
-        cursor.execute("PRAGMA mmap_size=268435456")
         cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(
