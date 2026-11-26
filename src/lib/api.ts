@@ -66,8 +66,8 @@ export async function api<T = unknown>(
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    controller.abort(new Error('API request timed out after 15 seconds'));
-  }, 15000);
+    controller.abort(new Error('API request timed out after 60 seconds'));
+  }, 60000);
 
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
