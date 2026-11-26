@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { API_BASE } from '../../lib/api';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Check, AlertCircle, User, Mail, Phone } from 'lucide-react';
 
 export interface CalendarConfig {
@@ -150,7 +151,7 @@ export const GoogleCalendarWidget: React.FC<GoogleCalendarWidgetProps> = ({
   useEffect(() => {
     let isMounted = true;
     const fetchSlots = () => {
-      fetch('http://localhost:8000/api/v1/funnels/public/booked-slots')
+      fetch(`${API_BASE}/funnels/public/booked-slots`)
         .then(res => res.json())
         .then(data => {
           if (isMounted && data.booked_slots) {
@@ -242,7 +243,7 @@ export const GoogleCalendarWidget: React.FC<GoogleCalendarWidgetProps> = ({
           phone,
         });
       } else {
-        const response = await fetch('http://localhost:8000/api/v1/funnels/public/book', {
+        const response = await fetch(`${API_BASE}/funnels/public/book`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

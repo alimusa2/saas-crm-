@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import styles from './LeadsPage.module.css';
 import { Plus, Edit2, Trash2, X, Search, Filter, Upload, CheckCircle, AlertTriangle, Download, RefreshCw, Calendar, Award } from 'lucide-react';
-import { crmApi, settingsApi, type Lead } from '../../lib/api';
+import { crmApi, settingsApi, API_BASE, type Lead } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 
 export const LeadsPage = () => {
@@ -274,7 +274,7 @@ export const LeadsPage = () => {
               setIsExporting(false);
               setIsExportOpen(false);
               // Open file in browser for download
-              const downloadUrl = 'http://localhost:8000/api/v1' + current.file_path;
+              const downloadUrl = API_BASE + current.file_path;
               window.open(downloadUrl, '_blank');
             } else if (current.status === 'Failed') {
               clearInterval(poller);

@@ -15,7 +15,6 @@ if "sqlite" not in settings.SQLALCHEMY_DATABASE_URI:
         "pool_pre_ping": True,
         "connect_args": {
             "statement_cache_size": 0,
-            "prepared_statement_cache_size": 0,
         },
     })
 
@@ -28,17 +27,12 @@ engine = create_async_engine(
 @event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     if engine.dialect.name == "sqlite":
-        # PythonAnywhere network storage does not support WAL mode mmap shared memory
-        is_pa = os.getenv("PYTHONANYWHERE_SITE") or "wsgi" in os.getenv("SERVER_SOFTWARE", "").lower()
         cursor = dbapi_connection.cursor()
-        if not is_pa:
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute("PRAGMA mmap_size=268435456")
-        else:
-            cursor.execute("PRAGMA journal_mode=DELETE")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA cache_size=-64000")
         cursor.execute("PRAGMA temp_store=MEMORY")
+        cursor.execute("PRAGMA mmap_size=268435456")
         cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(

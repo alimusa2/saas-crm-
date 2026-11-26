@@ -153,10 +153,13 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE gmailintegration ADD COLUMN last_sync_message TEXT"))
 
         # Alter table contact for address and tax details
-        cols_contact = await _get_cols(conn, "contact")
-        for col_name in ["billing_address", "tax_information"]:
-            if col_name not in cols_contact:
-                await conn.execute(text(f"ALTER TABLE contact ADD COLUMN {col_name} TEXT"))
+        try:
+            cols_contact = await _get_cols(conn, "contact")
+            for col_name in ["billing_address", "tax_information"]:
+                if col_name not in cols_contact:
+                    await conn.execute(text(f"ALTER TABLE contact ADD COLUMN {col_name} TEXT"))
+        except Exception:
+            pass
 
         # Alter table company for tax details
         cols_company = await _get_cols(conn, "company")
@@ -385,17 +388,70 @@ async def lifespan(app: FastAPI):
     subscribe("lead.created", on_lead_created)
     subscribe("form.submitted", on_lead_created)
 
-    # Start background scheduler loops (only if not running under WSGI like PythonAnywhere)
-    is_wsgi = os.getenv("PYTHONANYWHERE_SITE") or "wsgi" in os.getenv("SERVER_SOFTWARE", "").lower()
-    if not is_wsgi:
-        scheduler_task = asyncio.create_task(run_scheduler())
-        gmail_sync_task = asyncio.create_task(run_gmail_sync_scheduler())
+    # Seed default admin user on fresh database if no users exist
+    try:
+        from app.modules.auth.models import User
+        from app.core.security import get_password_hash
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as session:
+            user_res = await session.execute(select(User).limit(1))
+            if not user_res.scalars().first():
+                admin_user = User(
+                    email="admin@growthos.com",
+                    hashed_password=get_password_hash("Pass123!"),
+                    first_name="Admin",
+                    last_name="User",
+                    is_superuser=True,
+                    is_active=True,
+                    organization_id="org_demo"
+                )
+                session.add(admin_user)
+                await session.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Could not seed default user: {e}")
+
+    # Start background scheduler loop for campaign sending (in-app fallback for local development)
+    import asyncio
+    from app.modules.campaigns.tasks import _async_schedule_campaigns
+    
+    async def run_scheduler():
+        import logging
+        logger = logging.getLogger("app.scheduler")
+        logger.info("Starting background campaign scheduler loop...")
+        while True:
+            try:
+                await _async_schedule_campaigns()
+            except Exception as e:
+                logger.error(f"Error in campaign scheduler loop: {e}", exc_info=True)
+            await asyncio.sleep(5)  # Poll database every 5 seconds for responsive local scheduling
+
+    scheduler_task = asyncio.create_task(run_scheduler())
+
+    # Start background scheduler loop for incoming Gmail synchronization (2-minute cycle)
+    from app.modules.gmail.sync_service import GmailSyncService
+    from app.db.session import AsyncSessionLocal
+
+    async def run_gmail_sync_scheduler():
+        import logging
+        logger = logging.getLogger("app.gmail_scheduler")
+        logger.info("Starting background incoming Gmail sync scheduler loop (120s interval)...")
+        await asyncio.sleep(5)  # initial startup delay
+        while True:
+            try:
+                async with AsyncSessionLocal() as db:
+                    sync_svc = GmailSyncService(db)
+                    await sync_svc.sync_all_mailboxes()
+            except Exception as e:
+                logger.error(f"Error in Gmail sync scheduler loop: {e}", exc_info=True)
+            await asyncio.sleep(120)  # Poll every 2 minutes
+
+    gmail_sync_task = asyncio.create_task(run_gmail_sync_scheduler())
 
     yield
 
-    if not is_wsgi:
-        scheduler_task.cancel()
-        gmail_sync_task.cancel()
+    scheduler_task.cancel()
+    gmail_sync_task.cancel()
 
 
 
@@ -407,7 +463,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow CORS for local frontend dev server, FRONTEND_URL env var, Render, Vercel, and PythonAnywhere domains
+# Allow CORS for local frontend dev server, FRONTEND_URL env var, and Render domains
 frontend_url = os.getenv("FRONTEND_URL")
 allowed_origins = [
     "http://localhost:5173",
@@ -419,13 +475,15 @@ allowed_origins = [
     "http://localhost:5174",
     "http://127.0.0.1:5174",
 ]
-if frontend_url and frontend_url not in allowed_origins:
-    allowed_origins.append(frontend_url)
+if frontend_url:
+    for u in [x.strip() for x in frontend_url.split(",") if x.strip()]:
+        if u not in allowed_origins:
+            allowed_origins.append(u)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https?://.*\.onrender\.com|https?://.*\.vercel\.app|https?://.*\.pythonanywhere\.com|https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origin_regex=r"https?://.*\.onrender\.com|https?://.*\.vercel\.app|https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

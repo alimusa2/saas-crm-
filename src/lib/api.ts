@@ -1,4 +1,18 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
+export const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1';
+export const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ||
+  (import.meta.env.VITE_API_BASE ? import.meta.env.VITE_API_BASE.replace(/\/api\/v1\/?$/, '') : '') ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
+
+export const resolveAssetUrl = (url?: string): string => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/static') || trimmed.startsWith('static/')) {
+    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    return `${BACKEND_URL}${cleanPath}`;
+  }
+  return trimmed;
+};
 
 function getToken(): string | null {
   return localStorage.getItem('access_token');
@@ -52,8 +66,8 @@ export async function api<T = unknown>(
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    controller.abort(new Error('API request timed out after 10 seconds'));
-  }, 10000);
+    controller.abort(new Error('API request timed out after 15 seconds'));
+  }, 15000);
 
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
@@ -617,13 +631,13 @@ export const funnelsApi = {
     utm_term?: string;
     utm_content?: string;
     converted?: boolean;
-  }) => fetch(`http://localhost:8000/api/v1/funnels/public/${funnelId}/visit`, {
+  }) => fetch(`${API_BASE}/funnels/public/${funnelId}/visit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }),
   getPublicFunnel: (funnelId: string) =>
-    fetch(`http://localhost:8000/api/v1/funnels/public/${funnelId}`).then(r => r.ok ? r.json() : Promise.reject('Funnel not found or not published')),
+    fetch(`${API_BASE}/funnels/public/${funnelId}`).then(r => r.ok ? r.json() : Promise.reject('Funnel not found or not published')),
 };
 
 // ─── Contacts API ─────────────────────────────────────────────────────────────

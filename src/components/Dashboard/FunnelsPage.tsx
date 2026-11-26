@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './FunnelsPage.module.css';
-import { funnelsApi, formsApi, teamApi } from '../../lib/api';
+import { funnelsApi, formsApi, teamApi, API_BASE, BACKEND_URL } from '../../lib/api';
 import type { Funnel, FunnelStep, FunnelAnalytics, Form, FormField, FunnelComponent, TeamMember } from '../../lib/api';
 import { normalizeLayoutSettings, compileElementLayoutCSS } from '../../lib/styleEngine';
 import { ICON_SVG_LIBRARY, renderSvgIcon, renderSocialLinksComponent } from './PublicFunnelPage';
@@ -31,7 +31,7 @@ const resolveAssetUrl = (url?: string): string => {
   const trimmed = url.trim();
   if (trimmed.startsWith('/static') || trimmed.startsWith('static/')) {
     const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-    return `http://localhost:8000${cleanPath}`;
+    return `${BACKEND_URL}${cleanPath}`;
   }
   return trimmed;
 };
@@ -4699,7 +4699,7 @@ export const FunnelsPage = () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/funnels/media/upload', {
+      const response = await fetch(`${API_BASE}/funnels/media/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
@@ -5053,7 +5053,7 @@ export const FunnelsPage = () => {
                           position: 'absolute',
                           top: 0, left: 0, right: 0, bottom: 0,
                           width: '100%', height: '100%',
-                          backgroundImage: `url(${sec.settings.background_image.startsWith('/static/') ? `http://localhost:8000${sec.settings.background_image}` : sec.settings.background_image})`,
+                          backgroundImage: `url(${sec.settings.background_image.startsWith('/static/') ? `${BACKEND_URL}${sec.settings.background_image}` : sec.settings.background_image})`,
                           backgroundSize: sec.settings.background_size || 'cover',
                           backgroundRepeat: sec.settings.background_repeat || 'no-repeat',
                           backgroundAttachment: sec.settings.background_attachment || 'scroll',
@@ -5511,7 +5511,7 @@ export const FunnelsPage = () => {
                                                     )}
                                                     {parsed.provider === 'html5' && (
                                                       <video
-                                                        src={parsed.id.startsWith('/static/') ? `http://localhost:8000${parsed.id}` : parsed.id}
+                                                        src={parsed.id.startsWith('/static/') ? `${BACKEND_URL}${parsed.id}` : parsed.id}
                                                         autoPlay={cfg.autoplay}
                                                         muted={cfg.autoplay}
                                                         controls={cfg.controls !== false}
@@ -6838,7 +6838,7 @@ export const FunnelsPage = () => {
                         </div>
                       ) : (
                         <img
-                          src={`http://localhost:8000${asset.url}`}
+                          src={`${BACKEND_URL}${asset.url}`}
                           alt={asset.filename}
                           style={{ width: '100%', height: '72px', objectFit: 'cover', borderRadius: '6px' }}
                         />

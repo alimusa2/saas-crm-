@@ -1,6 +1,7 @@
 import { normalizeLayoutSettings, compileElementLayoutCSS } from '../../lib/styleEngine';
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Funnel, FunnelStep } from '../../lib/api';
+import { API_BASE, BACKEND_URL, resolveAssetUrl } from '../../lib/api';
 import { formsApi } from '../../lib/api';
 import type { Form, FormField } from '../../lib/api';
 import { getFormTheme } from './FormBuilderModal';
@@ -10,17 +11,9 @@ interface PublicFunnelPageProps {
   funnelId: string;
 }
 
-const BASE = 'http://localhost:8000/api/v1';
+const BASE = API_BASE;
 
-const resolveAssetUrl = (url?: string): string => {
-  if (!url) return '';
-  const trimmed = url.trim();
-  if (trimmed.startsWith('/static') || trimmed.startsWith('static/')) {
-    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-    return `http://localhost:8000${cleanPath}`;
-  }
-  return trimmed;
-};
+// resolveAssetUrl imported from ../../lib/api
 
 const parseColWidthFlex = (w: any): { flex: string; width?: string } => {
   if (!w) return { flex: '1 1 0%' };
@@ -1003,7 +996,7 @@ const NavbarRenderer: React.FC<{ section: any; isMobileDevice: boolean }> = ({ s
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, justifyContent: (!isMobileDevice && logoAlign === 'center') ? 'center' : 'flex-start' }}>
         {s.logo_url && (
           <img
-            src={s.logo_url.startsWith('/static') ? `http://localhost:8000${s.logo_url}` : s.logo_url}
+            src={s.logo_url.startsWith('/static') ? `${BACKEND_URL}${s.logo_url}` : s.logo_url}
             alt="logo"
             style={logoImgStyle}
           />
@@ -1353,7 +1346,7 @@ const FooterRenderer: React.FC<{ section: any; isMobileDevice: boolean }> = ({ s
               {col.type === 'brand' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {s.show_footer_logo && logoUrl ? (
-                    <img src={logoUrl.startsWith('/static') ? `http://localhost:8000${logoUrl}` : logoUrl} alt="Logo" style={{ width: logoWidth, height: 'auto', objectFit: 'contain' }} />
+                    <img src={logoUrl.startsWith('/static') ? `${BACKEND_URL}${logoUrl}` : logoUrl} alt="Logo" style={{ width: logoWidth, height: 'auto', objectFit: 'contain' }} />
                   ) : (
                     <h3 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: headingColor, letterSpacing: '-0.5px' }}>
                       {s.footer_company_name || s.footer_brand_title || colTitle || 'GrowthOS'}
@@ -2008,7 +2001,7 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
 
       case 'Image': {
         const imgSrc = cfg.url || cfg.src || '';
-        const fullSrc = imgSrc.startsWith('/static/') ? `http://localhost:8000${imgSrc}` : imgSrc;
+        const fullSrc = imgSrc.startsWith('/static/') ? `${BACKEND_URL}${imgSrc}` : imgSrc;
         return (
           <div key={key} className={`comp-${comp.id}`} style={{ margin: cfg.margin || '0 0 16px 0', textAlign: (cfg.alignment || cfg.align || 'center') as any }}>
             {fullSrc ? (
@@ -2036,7 +2029,7 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
               </div>
             )}
             {parsed.provider === 'html5' && (
-              <video src={parsed.id.startsWith('/static') ? `http://localhost:8000${parsed.id}` : parsed.id} autoPlay={cfg.autoplay || cfg.auto_play} muted={cfg.muted || cfg.mute} loop={cfg.loop} controls={!(cfg.autoplay || cfg.auto_play)} style={{ width: '100%', display: 'block' }} />
+              <video src={parsed.id.startsWith('/static') ? `${BACKEND_URL}${parsed.id}` : parsed.id} autoPlay={cfg.autoplay || cfg.auto_play} muted={cfg.muted || cfg.mute} loop={cfg.loop} controls={!(cfg.autoplay || cfg.auto_play)} style={{ width: '100%', display: 'block' }} />
             )}
             {(parsed.provider === 'unknown' || parsed.provider === 'none') && (
               <div style={{ background: '#f1f5f9', padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
@@ -2134,7 +2127,7 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
                   </div>
                   <p style={{ color: '#334155', fontSize: '15px', lineHeight: '1.6', margin: '0 0 16px 0', fontStyle: 'italic' }}>"{quote}"</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {photo ? <img src={photo.startsWith('/static') ? `http://localhost:8000${photo}` : photo} alt={name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '16px' }}>{(name || '?')[0]}</div>}
+                    {photo ? <img src={photo.startsWith('/static') ? `${BACKEND_URL}${photo}` : photo} alt={name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '16px' }}>{(name || '?')[0]}</div>}
                     <div>
                       <p style={{ margin: 0, fontWeight: 700, color: '#1e293b', fontSize: '14px' }}>{name}</p>
                       {role && <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>{role}</p>}
@@ -2319,7 +2312,7 @@ export const PublicFunnelPage: React.FC<PublicFunnelPageProps> = ({ funnelId }) 
                           <video src={section.settings.video_bg_url} autoPlay loop muted playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, opacity: section.settings.video_opacity ?? 0.3 }} onError={() => { }} />
                         )}
                         {section.settings?.background_image && (
-                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', backgroundImage: `url(${section.settings.background_image.startsWith('/static/') ? `http://localhost:8000${section.settings.background_image}` : section.settings.background_image})`, backgroundSize: section.settings.background_size || '100% 100%', backgroundRepeat: section.settings.background_repeat || 'no-repeat', backgroundAttachment: section.settings.background_attachment || 'scroll', backgroundPosition: section.settings.background_position || 'center center', zIndex: 0, pointerEvents: 'none' }} />
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', backgroundImage: `url(${section.settings.background_image.startsWith('/static/') ? `${BACKEND_URL}${section.settings.background_image}` : section.settings.background_image})`, backgroundSize: section.settings.background_size || '100% 100%', backgroundRepeat: section.settings.background_repeat || 'no-repeat', backgroundAttachment: section.settings.background_attachment || 'scroll', backgroundPosition: section.settings.background_position || 'center center', zIndex: 0, pointerEvents: 'none' }} />
                         )}
                         {section.settings?.overlay_color && (
                           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: section.settings.overlay_color, opacity: section.settings.overlay_opacity !== undefined ? Number(section.settings.overlay_opacity) : 0.5, background: section.settings.overlay_gradient || undefined, zIndex: 1 }} />

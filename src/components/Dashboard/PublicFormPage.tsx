@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../../lib/api';
 import { formsApi } from '../../lib/api';
 import type { Form, FormField } from '../../lib/api';
 import { getFormTheme } from './FormBuilderModal';
@@ -25,7 +26,7 @@ export const PublicFormPage: React.FC<PublicFormPageProps> = ({ formId }) => {
   const fetchFormData = async () => {
     try {
       setLoading(true);
-      const BASE = 'http://localhost:8000/api/v1';
+      const BASE = API_BASE;
       const [formResp, fieldsResp] = await Promise.all([
         fetch(`${BASE}/forms/public/${formId}`).then(r => r.ok ? r.json() : Promise.reject('Form not found')),
         fetch(`${BASE}/forms/public/${formId}/fields`).then(r => r.ok ? r.json() : []),
@@ -72,7 +73,7 @@ export const PublicFormPage: React.FC<PublicFormPageProps> = ({ formId }) => {
         }
       };
 
-      const BASE = 'http://localhost:8000/api/v1';
+      const BASE = API_BASE;
       const submitResp = await fetch(`${BASE}/forms/${formId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
